@@ -10,6 +10,9 @@
 #define CLASS_NAME	TEXT("Assn2")
 #define APP_NAME	TEXT("TCP v UDP")
 
+#define DEF_PACKETSIZE	1024
+#define DEF_PORTNUM		6000
+
 LPTransferProps CreateTransferProps();
 
 #endif

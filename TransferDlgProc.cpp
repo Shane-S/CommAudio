@@ -92,19 +92,25 @@ INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM 
 ---------------------------------------------------------------------------------------------------------------------------*/
 VOID SetDlgDefaults(HWND hwndDlg, LPTransferProps props)
 {
-	HWND hDropDown	= GetDlgItem(hwndDlg, ID_DROPDOWN_SIZE);
+	HWND hwndSend	= GetDlgItem(hwndDlg, ID_DROPDOWN_SEND);
+	HWND hwndSize	= GetDlgItem(hwndDlg, ID_DROPDOWN_SIZE);
 	HWND hwndTCPUDP	= GetDlgItem(hwndDlg, ID_RADIO_TCP);
-	HWND hwndSend	= GetDlgItem(hwndDlg, ID_RADIO_SEND10);
 
-	SendMessage(hDropDown, CB_ADDSTRING, 0, (LPARAM)TEXT("Use file size"));
-	SendMessage(hDropDown, CB_ADDSTRING, 0, (LPARAM)TEXT("1024 (1KB)"));
-	SendMessage(hDropDown, CB_ADDSTRING, 0, (LPARAM)TEXT("4096 (4KB)"));
-	SendMessage(hDropDown, CB_ADDSTRING, 0, (LPARAM)TEXT("20480 (20KB)"));
-	SendMessage(hDropDown, CB_ADDSTRING, 0, (LPARAM)TEXT("61440 (60KB)"));
-	SendMessage(hDropDown, CB_SETCURSEL, 0, 0);
+	// Set initial options for packet size dropdown
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("Use file size"));
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("1024 (1KB)"));
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("4096 (4KB)"));
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("20480 (20KB)"));
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("61440 (60KB)"));
+	SendMessage(hwndSize, CB_SETCURSEL, 0, 0);
+
+	// Set initial options for packet number dropdown
+	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("10"));
+	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("100"));
+	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("1000"));
+	SendMessage(hwndSend, CB_SETCURSEL, 0, 0);
 
 	SendMessage(hwndTCPUDP, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
-	SendMessage(hwndSend, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
@@ -132,19 +138,19 @@ BOOL FillTransferProps(HWND hwndDlg)
 {
 	TCHAR			buf[FILENAME_SIZE];
 	LPTransferProps props			= (LPTransferProps)GetWindowLongPtr(GetParent(hwndDlg), GWLP_TRANSFERPROPS);
-	HWND			hwndSendNum		= GetDlgItem(hwndDlg, ID_RADIO_SEND10);
 	HWND			hwndProtocol	= GetDlgItem(hwndDlg, ID_RADIO_TCP);
-	HWND			hwndDropDown	= GetDlgItem(hwndDlg, ID_DROPDOWN_SIZE);
+	HWND			hwndSize		= GetDlgItem(hwndDlg, ID_DROPDOWN_SIZE);
+	HWND			hwndSend		= GetDlgItem(hwndDlg, ID_DROPDOWN_SEND);
 	DWORD			dwDropDownSel;
 	DWORD			dwPacketSize;
+	DWORD			dwSendNum;
 
-	props->nNumToSend = (SendMessage(hwndSendNum, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 10 : 100;
 	props->nSockType  = (SendMessage(hwndProtocol, BM_GETCHECK, 0, 0) == BST_CHECKED) ? SOCK_STREAM : SOCK_DGRAM;
 
 	if(!GetDlgAddrInfo(hwndDlg, props))
 		return FALSE;
 
-	dwDropDownSel = SendMessage(hwndDropDown, CB_GETCURSEL, 0, 0);
+	dwDropDownSel = SendMessage(hwndSize, CB_GETCURSEL, 0, 0);
 	GetDlgItemText(hwndDlg, ID_TEXTBOX_FILE, buf, BUFSIZE);
 	
 	//Get the transfer details: packet size, what file (if any) to use, number of packets to send
@@ -156,20 +162,27 @@ BOOL FillTransferProps(HWND hwndDlg)
 			return FALSE;
 		}
 		_tcscpy_s(props->szFileName, buf);
-		props->nPacketSize = 0; // Use the file size
 	}
 	else
 	{
-		ComboBox_GetText(hwndDropDown, buf, FILENAME_SIZE);
-		if (_stscanf_s(buf, TEXT("%d"), &dwPacketSize) == 0)
+		ComboBox_GetText(hwndSize, buf, FILENAME_SIZE);
+		if (_stscanf_s(buf, TEXT("%d"), &dwPacketSize) == 0 || dwPacketSize == 0)
 		{
-			MessageBox(NULL, TEXT("Please enter a number for packet size."), TEXT("Invalid byte number"), MB_ICONERROR);
+			MessageBox(NULL, TEXT("Please enter a non-zero number for packet size."), TEXT("Invalid byte number"), MB_ICONERROR);
 			return FALSE;
 		}
 		props->nPacketSize = dwPacketSize;
-	}
 
-	return TRUE;
+		ComboBox_GetText(hwndSend, buf, FILENAME_SIZE);
+		if (_stscanf_s(buf, TEXT("%d"), &dwSendNum) == 0 || dwSendNum == 0)
+		{
+			MessageBox(NULL, TEXT("Please enter a non-zero number of packets to send."), TEXT("Invalid send number"), MB_ICONERROR);
+			return FALSE;
+		}
+		props->nNumToSend = dwSendNum;
+		props->szFileName[0] = 0;
+		return TRUE;
+	}
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
@@ -193,13 +206,13 @@ BOOL FillTransferProps(HWND hwndDlg)
 BOOL GetDlgAddrInfo(HWND hwndDlg, LPTransferProps props)
 {
 	TCHAR	buf[HOSTNAME_SIZE];
-	USHORT	usPortNum;
+	DWORD	usPortNum;
 	DWORD	dwBinaryAddr;
 	char	hostip_string[HOSTNAME_SIZE];
 
 	// Get the information for storage in our in_addr
 	GetDlgItemText(hwndDlg, ID_TEXTBOX_PORT, buf, BUFSIZE);
-	if(_tscanf_s(buf, "%h", &usPortNum) == 0)
+	if(_stscanf_s(buf, TEXT("%d"), &usPortNum) == 0)
 	{
 		MessageBox(NULL, TEXT("The port must be a number."), TEXT("Non-Numeric Port"), MB_ICONERROR);
 		return FALSE;
@@ -250,7 +263,7 @@ VOID OpenFileDlg(HWND hwndDlg)
 	ofn.nMaxCustFilter		= 0;
 	ofn.nFilterIndex		= 0;
 	ofn.lpstrFile			= szFileName;
-	ofn.nMaxFile			= BUFSIZE;
+	ofn.nMaxFile			= FILENAME_SIZE;
 	ofn.lpstrFileTitle		= NULL;
 	ofn.nMaxFileTitle		= NULL;
 	ofn.lpstrInitialDir		= NULL;
@@ -263,4 +276,5 @@ VOID OpenFileDlg(HWND hwndDlg)
 
 	GetOpenFileName(&ofn);
 	SetWindowText(hwndFile, szFileName);
+
 }

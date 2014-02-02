@@ -13,4 +13,4 @@ int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ..
 	// The va_end macro just zeroes out pArgList for no good reason
 	va_end(pArgList);
 	return MessageBox(NULL, szBuffer, szCaption, dwType);
-}
+}

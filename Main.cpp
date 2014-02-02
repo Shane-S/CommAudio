@@ -61,6 +61,8 @@ LPTransferProps CreateTransferProps()
 	memset(props->szFileName, 0, FILENAME_SIZE);
 	memset(props->szHostName, 0, HOSTNAME_SIZE);
 
+	props->nPacketSize = DEF_PACKETSIZE;
+
 	props->paddr_in = (LPSOCKADDR_IN)malloc(sizeof(SOCKADDR_IN));
 	if(props->paddr_in == NULL)
 	{
@@ -68,8 +70,11 @@ LPTransferProps CreateTransferProps()
 		return NULL;
 	}
 
-	props->paddr_in->sin_addr.s_addr = 0;
-	props->paddr_in->sin_family = AF_INET;
+	memset(props->paddr_in, 0, sizeof(sockaddr_in));
+
+	props->paddr_in->sin_addr.s_addr	= 0;
+	props->paddr_in->sin_family			= AF_INET;
+	props->paddr_in->sin_port			= htons(DEF_PORTNUM);
 	props->socket = 0;
 
 	return props;

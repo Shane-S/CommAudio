@@ -100,24 +100,16 @@ BOOL ClientInitSocket(LPTransferProps props)
 ---------------------------------------------------------------------------------------------------------------------------*/
 DWORD WINAPI ClientSendData(VOID *params)
 {
-	HWND			hwnd	= (HWND)params;
-	LPTransferProps	props	= (LPTransferProps)GetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS);
-	SOCKET			s		= props->socket;
-	HANDLE			hFile;
+	HWND			hwnd		= (HWND)params;
+	LPTransferProps	props		= (LPTransferProps)GetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS);
+	SOCKET			s			= props->socket;
+	BOOL			fUseFile	= FALSE;
 	CHAR			*buf;
 	DWORD			dwFileSize;
-	
-	DWORD res;
-
-	if (connect(s, (sockaddr *)props->paddr_in, sizeof(sockaddr)) == -1)
-	{
-		MessageBox(NULL, TEXT("Could not connect. Check settings and try again."),
-			TEXT("Could not connect to socket"), MB_ICONERROR);
-		return -1;
-	}
 
 	if (props->szFileName[0] != 0)
 	{
+		HANDLE hFile;
 		hFile = CreateFile(props->szHostName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hFile == NULL)
 		{
@@ -144,20 +136,25 @@ DWORD WINAPI ClientSendData(VOID *params)
 
 	if (props->nSockType == SOCK_DGRAM)
 	{
-		setsockopt(props->socket, SOL_SOCKET, SO_SNDBUF, buf, sizeof(buf));
+		setsockopt(props->socket, SOL_SOCKET, SO_SNDBUF, buf, props->nPacketSize);
 		for (int i = 0; i < props->nNumToSend; ++i)
 		{
-			if (sendto(props->socket, buf, props->nPacketSize, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr)) == SOCKET_ERROR);
+			if (sendto(props->socket, buf, props->nPacketSize, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr)) == SOCKET_ERROR)
 			{
 				MessageBoxPrintf(MB_ICONERROR, TEXT("sendto error"), TEXT("sendto encountered error %d"), WSAGetLastError());
-				props->socket = INVALID_SOCKET;
-				free(buf);
-				closesocket(props->socket);
+				break;
 			}
+			Sleep(1); // Have to sleep, else the send buffer will become overwhelmed
 		}
 	}
 	else
 	{
+		if (connect(s, (sockaddr *)props->paddr_in, sizeof(sockaddr)) == -1)
+		{
+			MessageBox(NULL, TEXT("Could not connect. Check settings and try again."),
+				TEXT("Could not connect to socket"), MB_ICONERROR);
+			return -1;
+		}
 
 	}
 

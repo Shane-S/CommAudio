@@ -62,6 +62,7 @@ LPTransferProps CreateTransferProps()
 	memset(props->szHostName, 0, HOSTNAME_SIZE);
 
 	props->nPacketSize = DEF_PACKETSIZE;
+	props->nNumToSend = DEF_NUMTOSEND;
 
 	props->paddr_in = (LPSOCKADDR_IN)malloc(sizeof(SOCKADDR_IN));
 	if(props->paddr_in == NULL)
@@ -71,11 +72,12 @@ LPTransferProps CreateTransferProps()
 	}
 
 	memset(props->paddr_in, 0, sizeof(sockaddr_in));
-
-	props->paddr_in->sin_addr.s_addr	= 0;
+	props->paddr_in->sin_addr.s_addr	= inet_addr("127.0.0.1");
 	props->paddr_in->sin_family			= AF_INET;
 	props->paddr_in->sin_port			= htons(DEF_PORTNUM);
+	
 	props->socket = 0;
+	props->nSockType = SOCK_STREAM;
 
 	return props;
 }

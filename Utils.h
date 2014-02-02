@@ -8,8 +8,14 @@
 #ifdef UNICODE
 #define TCHAR_2_CHAR(dest, src, bufsize) \
 	wcstombs_s(NULL, dest, bufsize, src, bufsize)
+
+#define CHAR_2_TCHAR(dest, src, bufsize) \
+	mbstowcs_s(NULL, dest, src, bufsize)
 #else
-#define TCHAR_TO_CHAR(dest, src, size) \
+#define TCHAR_2_CHAR(dest, src, size) \
+	strcpy_s(dest, src, bufsize)
+
+#define CHAR_2_TCHAR(dest, src, size) \
 	strcpy_s(dest, src, bufsize)
 #endif
 

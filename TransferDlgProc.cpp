@@ -92,25 +92,51 @@ INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM 
 ---------------------------------------------------------------------------------------------------------------------------*/
 VOID SetDlgDefaults(HWND hwndDlg, LPTransferProps props)
 {
-	HWND hwndSend	= GetDlgItem(hwndDlg, ID_DROPDOWN_SEND);
-	HWND hwndSize	= GetDlgItem(hwndDlg, ID_DROPDOWN_SIZE);
-	HWND hwndTCPUDP	= GetDlgItem(hwndDlg, ID_RADIO_TCP);
+	HWND	hwndSend	= GetDlgItem(hwndDlg, ID_DROPDOWN_SEND);
+	HWND	hwndSize	= GetDlgItem(hwndDlg, ID_DROPDOWN_SIZE);
+	HWND	hwndTCP		= GetDlgItem(hwndDlg, ID_RADIO_TCP);
+	HWND	hwndUDP		= GetDlgItem(hwndDlg, ID_RADIO_UDP);
+	HWND	hwndFile	= GetDlgItem(hwndDlg, ID_TEXTBOX_FILE);
+	HWND	hwndPort	= GetDlgItem(hwndDlg, ID_TEXTBOX_PORT);
+	HWND	hwndIP		= GetDlgItem(hwndDlg, ID_TEXTBOX_HOSTIP);
+	TCHAR	buf[FILENAME_SIZE];
 
 	// Set initial options for packet size dropdown
 	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("Use file size"));
-	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("1024 (1KB)"));
-	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("4096 (4KB)"));
-	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("20480 (20KB)"));
-	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("61440 (60KB)"));
-	SendMessage(hwndSize, CB_SETCURSEL, 0, 0);
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("1024"));
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("4096"));
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("20480"));
+	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("61440"));
+	if (props->szFileName[0] == 0)
+	{
+		_stprintf_s(buf, TEXT("%d"), props->nPacketSize);
+		SetWindowText(hwndSize, buf);
+	}
+	else
+	{
+		SendMessage(hwndSize, CB_SETCURSEL, 0, 0);
+		SetWindowText(hwndFile, props->szFileName);
+	}
 
 	// Set initial options for packet number dropdown
 	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("10"));
 	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("100"));
 	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("1000"));
-	SendMessage(hwndSend, CB_SETCURSEL, 0, 0);
+	_stprintf_s(buf, TEXT("%d"), props->nNumToSend);
+	SetWindowText(hwndSend, buf);
 
-	SendMessage(hwndTCPUDP, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+	SendMessage((props->nSockType == SOCK_STREAM) ? hwndTCP : hwndUDP, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+
+	_stprintf_s(buf, TEXT("%d"), ntohs(props->paddr_in->sin_port));
+	SetWindowText(hwndPort, buf);
+
+	if (props->szHostName[0] == 0)
+	{
+		CHAR_2_TCHAR(buf, inet_ntoa(props->paddr_in->sin_addr), FILENAME_SIZE);
+		SetWindowText(hwndIP, buf);
+	}
+	else
+		SetWindowText(hwndIP, props->szHostName);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
@@ -174,15 +200,15 @@ BOOL FillTransferProps(HWND hwndDlg)
 		props->nPacketSize = dwPacketSize;
 
 		ComboBox_GetText(hwndSend, buf, FILENAME_SIZE);
-		if (_stscanf_s(buf, TEXT("%d"), &dwSendNum) == 0 || dwSendNum == 0)
+		if (_stscanf_s(buf, TEXT("%d"), &dwSendNum) == 0 || dwSendNum <= 0)
 		{
-			MessageBox(NULL, TEXT("Please enter a non-zero number of packets to send."), TEXT("Invalid send number"), MB_ICONERROR);
+			MessageBox(NULL, TEXT("Please enter a non-negative number of packets to send."), TEXT("Invalid send number"), MB_ICONERROR);
 			return FALSE;
 		}
 		props->nNumToSend = dwSendNum;
 		props->szFileName[0] = 0;
-		return TRUE;
 	}
+	return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------

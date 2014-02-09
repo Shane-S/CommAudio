@@ -1,9 +1,3 @@
-/*
- * To do list:
- *
- * TODO: Change the SetDlgDefaults function to actually populate the fields based on LPTransferProps.
- */
-
 /*----------------------------------------------------------------------------------------------------------------------
 -- SOURCE FILE: HostIPDlg.cpp
 --
@@ -47,25 +41,29 @@
 ---------------------------------------------------------------------------------------------------------------------------*/
 INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
+	static DWORD dwHostMode;
+	static LPTransferProps props = NULL;
 	switch (uMsg)
 	{
 	case WM_INITDIALOG:
 	{
-		SetDlgDefaults(hwndDlg, (LPTransferProps)GetWindowLongPtr(GetParent(hwndDlg), GWLP_TRANSFERPROPS));
+		dwHostMode = (DWORD)GetWindowLongPtr(GetParent(hwndDlg), GWLP_HOSTMODE);
+		props = (LPTransferProps(GetWindowLongPtr(GetParent(hwndDlg), GWLP_TRANSFERPROPS)));
+		SetDlgDefaults(hwndDlg, dwHostMode, props);
 		break;
 	}
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
 		case IDOK:
-			if (FillTransferProps(hwndDlg))
+			if (FillTransferProps(hwndDlg, dwHostMode, props))
 				EndDialog(hwndDlg, LOWORD(wParam));
 			return TRUE;
 		case IDCANCEL:
 			EndDialog(hwndDlg, LOWORD(wParam));
 			return TRUE;
 		case ID_BUTTON_BROWSE:
-			OpenFileDlg(hwndDlg);
+			OpenFileDlg(hwndDlg, dwHostMode);
 			return TRUE;
 		}
 	}
@@ -87,10 +85,9 @@ INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM 
 -- RETURNS: void
 --
 -- NOTES:
--- Initialises the dialog box's menu selections. It also checks the props structure and sets menu items if they are
--- different from the defaults.
+-- Initialises the dialog box's menu selections. It checks the TransferProps structure to save what the user entered.
 ---------------------------------------------------------------------------------------------------------------------------*/
-VOID SetDlgDefaults(HWND hwndDlg, LPTransferProps props)
+VOID SetDlgDefaults(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 {
 	HWND	hwndSend	= GetDlgItem(hwndDlg, ID_DROPDOWN_SEND);
 	HWND	hwndSize	= GetDlgItem(hwndDlg, ID_DROPDOWN_SIZE);
@@ -100,6 +97,25 @@ VOID SetDlgDefaults(HWND hwndDlg, LPTransferProps props)
 	HWND	hwndPort	= GetDlgItem(hwndDlg, ID_TEXTBOX_PORT);
 	HWND	hwndIP		= GetDlgItem(hwndDlg, ID_TEXTBOX_HOSTIP);
 	TCHAR	buf[FILENAME_SIZE];
+
+	// Set port field
+	_stprintf_s(buf, TEXT("%d"), ntohs(props->paddr_in->sin_port));
+	SetWindowText(hwndPort, buf);
+
+	// Set radio button to either TCP or UDP
+	SendMessage((props->nSockType == SOCK_STREAM) ? hwndTCP : hwndUDP, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
+
+	// Set the file textbox text; doesn't matter if it's blank
+	SetWindowText(hwndFile, props->szFileName);
+
+	// We've now done everything for the server, so disable all other controls and return
+	if (dwHostMode == ID_HOSTTYPE_SERVER)
+	{
+		ComboBox_Enable(hwndSend, FALSE);
+		ComboBox_Enable(hwndSize, FALSE);
+		Edit_Enable(hwndIP, FALSE);
+		return;
+	}
 
 	// Set initial options for packet size dropdown
 	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("Use file size"));
@@ -113,10 +129,7 @@ VOID SetDlgDefaults(HWND hwndDlg, LPTransferProps props)
 		SetWindowText(hwndSize, buf);
 	}
 	else
-	{
 		SendMessage(hwndSize, CB_SETCURSEL, 0, 0);
-		SetWindowText(hwndFile, props->szFileName);
-	}
 
 	// Set initial options for packet number dropdown
 	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("10"));
@@ -125,11 +138,7 @@ VOID SetDlgDefaults(HWND hwndDlg, LPTransferProps props)
 	_stprintf_s(buf, TEXT("%d"), props->nNumToSend);
 	SetWindowText(hwndSend, buf);
 
-	SendMessage((props->nSockType == SOCK_STREAM) ? hwndTCP : hwndUDP, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
-
-	_stprintf_s(buf, TEXT("%d"), ntohs(props->paddr_in->sin_port));
-	SetWindowText(hwndPort, buf);
-
+	// Set the host name field
 	if (props->szHostName[0] == 0)
 	{
 		CHAR_2_TCHAR(buf, inet_ntoa(props->paddr_in->sin_addr), FILENAME_SIZE);
@@ -160,10 +169,9 @@ VOID SetDlgDefaults(HWND hwndDlg, LPTransferProps props)
 -- IP address corresponding to a host name (or vice versa) if the user chooses to do this. The result is stored in a string
 -- to be written in the main listbox.
 ---------------------------------------------------------------------------------------------------------------------------*/
-BOOL FillTransferProps(HWND hwndDlg)
+BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 {
 	TCHAR			buf[FILENAME_SIZE];
-	LPTransferProps props			= (LPTransferProps)GetWindowLongPtr(GetParent(hwndDlg), GWLP_TRANSFERPROPS);
 	HWND			hwndProtocol	= GetDlgItem(hwndDlg, ID_RADIO_TCP);
 	HWND			hwndSize		= GetDlgItem(hwndDlg, ID_DROPDOWN_SIZE);
 	HWND			hwndSend		= GetDlgItem(hwndDlg, ID_DROPDOWN_SEND);
@@ -173,12 +181,16 @@ BOOL FillTransferProps(HWND hwndDlg)
 
 	props->nSockType  = (SendMessage(hwndProtocol, BM_GETCHECK, 0, 0) == BST_CHECKED) ? SOCK_STREAM : SOCK_DGRAM;
 
-	if(!GetDlgAddrInfo(hwndDlg, props))
+	if(!GetDlgAddrInfo(hwndDlg, dwHostMode, props))
 		return FALSE;
 
 	dwDropDownSel = SendMessage(hwndSize, CB_GETCURSEL, 0, 0);
-	GetDlgItemText(hwndDlg, ID_TEXTBOX_FILE, buf, BUFSIZE);
+	GetDlgItemText(hwndDlg, ID_TEXTBOX_FILE, buf, FILENAME_SIZE);
+	_tcscpy_s(props->szFileName, buf);
 	
+	if (dwHostMode == ID_HOSTTYPE_SERVER)
+		return TRUE; // Don't need any more info for the server; we're done
+
 	//Get the transfer details: packet size, what file (if any) to use, number of packets to send
 	if (dwDropDownSel == DROPDOWN_USEFILESIZE)
 	{
@@ -187,7 +199,6 @@ BOOL FillTransferProps(HWND hwndDlg)
 			MessageBox(NULL, TEXT("Please specify a file to send."), TEXT("No file"), MB_ICONERROR);
 			return FALSE;
 		}
-		_tcscpy_s(props->szFileName, buf);
 	}
 	else
 	{
@@ -212,7 +223,7 @@ BOOL FillTransferProps(HWND hwndDlg)
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: HostIPDlgProc
+-- FUNCTION: GetDlgAddrInfo
 -- January 14th, 2014
 --
 -- DESIGNER: Shane Spoor
@@ -229,7 +240,7 @@ BOOL FillTransferProps(HWND hwndDlg)
 -- Retrieves the port number and IP address/host name of entered by the user and places them in the sock_inaddr struct if
 -- there are no errors.
 ---------------------------------------------------------------------------------------------------------------------------*/
-BOOL GetDlgAddrInfo(HWND hwndDlg, LPTransferProps props)
+BOOL GetDlgAddrInfo(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 {
 	TCHAR	buf[HOSTNAME_SIZE];
 	DWORD	usPortNum;
@@ -237,7 +248,7 @@ BOOL GetDlgAddrInfo(HWND hwndDlg, LPTransferProps props)
 	char	hostip_string[HOSTNAME_SIZE];
 
 	// Get the information for storage in our in_addr
-	GetDlgItemText(hwndDlg, ID_TEXTBOX_PORT, buf, BUFSIZE);
+	GetDlgItemText(hwndDlg, ID_TEXTBOX_PORT, buf, HOSTNAME_SIZE);
 	if(_stscanf_s(buf, TEXT("%d"), &usPortNum) == 0)
 	{
 		MessageBox(NULL, TEXT("The port must be a number."), TEXT("Non-Numeric Port"), MB_ICONERROR);
@@ -245,7 +256,10 @@ BOOL GetDlgAddrInfo(HWND hwndDlg, LPTransferProps props)
 	}
 	props->paddr_in->sin_port = htons(usPortNum);
 
-	GetDlgItemText(hwndDlg, ID_TEXTBOX_HOSTIP, buf, BUFSIZE);
+	if (dwHostMode == ID_HOSTTYPE_SERVER)
+		return TRUE;
+
+	GetDlgItemText(hwndDlg, ID_TEXTBOX_HOSTIP, buf, HOSTNAME_SIZE);
 	if(buf[0] == 0)
 	{
 		MessageBox(NULL, TEXT("Please enter a host name or IP address."), TEXT("No Host/IP"), MB_ICONERROR);
@@ -274,16 +288,20 @@ BOOL GetDlgAddrInfo(HWND hwndDlg, LPTransferProps props)
 	return TRUE;
 }
 
-VOID OpenFileDlg(HWND hwndDlg)
+VOID OpenFileDlg(HWND hwndDlg, DWORD dwHostMode)
 {
 	OPENFILENAME	ofn;
 	TCHAR			szFileName[FILENAME_SIZE] = {0};
 	HWND			hwndFile = GetDlgItem(hwndDlg, ID_TEXTBOX_FILE);
+	DWORD			dwFlags = OFN_EXPLORER | OFN_FORCESHOWHIDDEN | OFN_NONETWORKBUTTON;
+
+	if (dwHostMode == ID_HOSTTYPE_CLIENT)
+		dwFlags |= OFN_PATHMUSTEXIST;
 
 	ofn.lStructSize			= sizeof(OPENFILENAME);
 	ofn.hwndOwner			= hwndDlg;
 	ofn.hInstance			= NULL;
-	ofn.Flags				= OFN_EXPLORER | OFN_FORCESHOWHIDDEN | OFN_NONETWORKBUTTON | OFN_PATHMUSTEXIST;
+	ofn.Flags				= dwFlags;
 	ofn.lpstrFilter			= NULL;
 	ofn.lpstrCustomFilter	= NULL;
 	ofn.nMaxCustFilter		= 0;
@@ -302,5 +320,4 @@ VOID OpenFileDlg(HWND hwndDlg)
 
 	GetOpenFileName(&ofn);
 	SetWindowText(hwndFile, szFileName);
-
 }

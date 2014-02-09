@@ -3,6 +3,7 @@
 
 #include <WinSock2.h>
 #include <Windows.h>
+#include <windowsx.h>
 #include <cstdio>
 #include <tchar.h>
 #include "resource.h"
@@ -21,9 +22,9 @@
 #define DROPDOWN_USEFILESIZE 0
 
 INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
-VOID SetDlgDefaults(HWND hwndDlg, LPTransferProps props);
-BOOL FillTransferProps(HWND hwndDlg);
-BOOL GetDlgAddrInfo(HWND hwndDlg, LPTransferProps);
-VOID OpenFileDlg(HWND hwndDlg);
+VOID SetDlgDefaults(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props);
+BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props);
+BOOL GetDlgAddrInfo(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props);
+VOID OpenFileDlg(HWND hwndDlg, DWORD dwHostMode);
 
 #endif

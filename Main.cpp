@@ -6,13 +6,13 @@ int WINAPI WinMain(HINSTANCE hPrevInstance, HINSTANCE hInstance, LPSTR lpszCmdAr
 	HWND			hwnd;
 	MSG				msg;
 	WNDCLASS		wndclass;
-	LPTransferProps props;
 	WSADATA			wsaData;
+	LPTransferProps props = CreateTransferProps();
 
 	wndclass.style = CS_HREDRAW | CS_VREDRAW;
 	wndclass.lpfnWndProc = WndProc;
 	wndclass.cbClsExtra = 0;
-	wndclass.cbWndExtra = sizeof(LPTransferProps) + sizeof(DWORD);
+	wndclass.cbWndExtra = sizeof(DWORD) + sizeof(LPTransferProps);
 	wndclass.hInstance = hInstance;
 	wndclass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	wndclass.hCursor = LoadCursor(NULL, IDC_ARROW);
@@ -38,6 +38,7 @@ int WINAPI WinMain(HINSTANCE hPrevInstance, HINSTANCE hInstance, LPSTR lpszCmdAr
 		0, 0, 600, 600, NULL, NULL, hInstance, NULL);
 
 	SetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS, (LONG)props);
+	SetWindowLongPtr(hwnd, GWLP_HOSTMODE, ID_HOSTTYPE_CLIENT);
 
 	ShowWindow(hwnd, iCmdShow);
 	UpdateWindow(hwnd);
@@ -79,5 +80,11 @@ LPTransferProps CreateTransferProps()
 	props->socket = 0;
 	props->nSockType = SOCK_STREAM;
 
+	memset(&props->wsaOverlapped, 0, sizeof(WSAOVERLAPPED));
+
+	props->startTime = 0;
+	props->endTime = 0;
+
+	props->dwTimeout = COMM_TIMEOUT;
 	return props;
 }

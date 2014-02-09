@@ -1,10 +1,8 @@
 #include "ClientTransfer.h"
 
-/*
- * Post-condition:
- * If this returns true, the socket descriptor in props is (or was at one point) ready to send on.
- * If this returns false, the socket descriptor in props will be 0.
- */
+static DWORD	sent = 0;				// Either the number of bytes or packets sent
+static time_t	startTime, endTime;		// Start and end timestamps for the transfer
+
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: ClientInitSocket
 -- Febrary 1st, 2014
@@ -63,7 +61,7 @@ BOOL ClientInitSocket(LPTransferProps props)
 	if (props->paddr_in->sin_addr.s_addr != 0)
 	{
 		SOCKET s;
-		if ((s = socket(PF_INET, props->nSockType, 0)) < 0)
+		if ((s = WSASocket(PF_INET, props->nSockType, 0, NULL, NULL, WSA_FLAG_OVERLAPPED)) < 0)
 		{
 			MessageBox(NULL, TEXT("Could not create socket."), TEXT("No Socket"), MB_ICONERROR);
 			props->socket = INVALID_SOCKET;
@@ -101,30 +99,28 @@ BOOL ClientInitSocket(LPTransferProps props)
 DWORD WINAPI ClientSendData(VOID *params)
 {
 	HWND			hwnd		= (HWND)params;
-	LPTransferProps	props		= (LPTransferProps)GetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS);
+	LPTransferProps props		= (LPTransferProps)GetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS);
 	SOCKET			s			= props->socket;
-	BOOL			fUseFile	= FALSE;
+	BOOL			bUseFile	= FALSE;
+	WSABUF			wsaBuf;
 	CHAR			*buf;
-	DWORD			dwFileSize;
+	DWORD			dwFileSize	= 0;
 
 	if (props->szFileName[0] != 0)
 	{
-		HANDLE hFile;
-		hFile = CreateFile(props->szHostName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hFile == NULL)
-		{
-			MessageBoxPrintf(MB_ICONERROR, TEXT("Couldn't Open File"),
-				TEXT("Could not open file %s. Please check the spelling or select a different file."), props->szFileName);
-			return -1;
-		}
-		dwFileSize = GetFileSize(hFile, NULL);
-		buf = (CHAR *)malloc(dwFileSize);
-		ReadFile(hFile, buf, dwFileSize, NULL, NULL);
+		if (!LoadFile(&wsaBuf, props->szFileName, &buf, &dwFileSize, props))
+			return 1;
 	}
 	else
 	{
+		CHAR *size = (CHAR *)&props->nNumToSend;
 		buf = (CHAR *)malloc(props->nPacketSize);
 		memset(buf, 'a', props->nPacketSize);
+		wsaBuf.len = props->nPacketSize;
+
+		// Copy the number of packets to send into the buffer
+		for (int i = 0; i < sizeof(DWORD); ++i)
+			buf[i] = size[i];
 	}
 
 	if (buf == NULL)
@@ -133,33 +129,145 @@ DWORD WINAPI ClientSendData(VOID *params)
 			TEXT("Unable to allocate memory. Windows error: %d"), GetLastError());
 		return -1;
 	}
+	wsaBuf.buf = buf;
 
 	if (props->nSockType == SOCK_DGRAM)
 	{
 		setsockopt(props->socket, SOL_SOCKET, SO_SNDBUF, buf, props->nPacketSize);
 		for (int i = 0; i < props->nNumToSend; ++i)
 		{
-			if (sendto(props->socket, buf, props->nPacketSize, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr)) == SOCKET_ERROR)
+			DWORD error;
+			if(WSASendTo(props->socket, &wsaBuf, 1, NULL, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr), 
+				(LPOVERLAPPED)props, UDPSendCompletion) == SOCKET_ERROR && (error = WSAGetLastError()) != WSA_IO_PENDING)
 			{
-				MessageBoxPrintf(MB_ICONERROR, TEXT("sendto error"), TEXT("sendto encountered error %d"), WSAGetLastError());
-				break;
+				if (error = WSAENOTSOCK)
+					break;
 			}
-			Sleep(1); // Have to sleep, else the send buffer will become overwhelmed
+			SleepEx(INFINITE, TRUE);
 		}
 	}
 	else
 	{
-		if (connect(s, (sockaddr *)props->paddr_in, sizeof(sockaddr)) == -1)
+		if (WSAConnect(s, (sockaddr *)props->paddr_in, sizeof(sockaddr), NULL, NULL, NULL, NULL) == SOCKET_ERROR)
 		{
 			MessageBox(NULL, TEXT("Could not connect. Check settings and try again."),
 				TEXT("Could not connect to socket"), MB_ICONERROR);
-			return -1;
 		}
+		else
+		{
+			for (int i = 0; i < props->nNumToSend; ++i)
+			{
+				DWORD error;
+				if (WSASend(s, &wsaBuf, 1, NULL, 0, (LPOVERLAPPED)props, TCPSendCompletion) == SOCKET_ERROR
+					&& (error = WSAGetLastError()) != WSA_IO_PENDING)
+				{
+					if (error = WSAENOTSOCK)
+						break;
+				}
 
+			}
+		}
 	}
 
 	free(buf);
 	closesocket(props->socket);
 	props->socket = INVALID_SOCKET;
 	return 0;
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: ClientSendData
+-- Febrary 1st, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: ClientSendData(VOID *params)
+--							VOID *params: Handle to the main window cast as a VOID *.
+--
+-- RETURNS: -1 if the connection fails (TCP), the user-specified file couldn't be opened, or the buffer couldn't be allacted.
+--			Returns 0 on successful sending.
+--
+-- NOTES:
+-- Sends either a chosen file (if there is one) or a specified number of packets of the specified size.
+---------------------------------------------------------------------------------------------------------------------------*/
+VOID CALLBACK UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
+	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
+{
+	LPTransferProps props = (LPTransferProps)lpOverlapped;
+	if (dwErrorCode != 0)
+	{
+		MessageBoxPrintf(MB_ICONERROR, TEXT("sendto error"), TEXT("WSASendTo encountered error %d"), dwErrorCode);
+		closesocket(props->socket);
+		return;
+	}
+	++sent;
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: ClientSendData
+-- Febrary 1st, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: ClientSendData(VOID *params)
+--							VOID *params: Handle to the main window cast as a VOID *.
+--
+-- RETURNS: -1 if the connection fails (TCP), the user-specified file couldn't be opened, or the buffer couldn't be allacted.
+--			Returns 0 on successful sending.
+--
+-- NOTES:
+-- Sends either a chosen file (if there is one) or a specified number of packets of the specified size.
+---------------------------------------------------------------------------------------------------------------------------*/
+VOID CALLBACK TCPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
+	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
+{
+	LPTransferProps props = (LPTransferProps)lpOverlapped;
+	if (dwErrorCode != 0)
+	{
+		MessageBoxPrintf(MB_ICONERROR, TEXT("send error"), TEXT("WSASend failed with socket error %d."), dwErrorCode);
+		closesocket(props->socket);
+		return;
+	}
+	sent += dwNumberOfBytesTransfered;
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: ClientSendData
+-- Febrary 1st, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: ClientSendData(VOID *params)
+--							VOID *params: Handle to the main window cast as a VOID *.
+--
+-- RETURNS: -1 if the connection fails (TCP), the user-specified file couldn't be opened, or the buffer couldn't be allacted.
+--			Returns 0 on successful sending.
+--
+-- NOTES:
+-- Sends either a chosen file (if there is one) or a specified number of packets of the specified size.
+---------------------------------------------------------------------------------------------------------------------------*/
+BOOL LoadFile(LPWSABUF wsaBuf, const TCHAR *szFileName, char **buf, LPDWORD lpdwFileSize, LPTransferProps props)
+{
+	DWORD dwFileSize;
+	HANDLE hFile;
+	hFile = CreateFile(props->szHostName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (hFile == NULL)
+	{
+		MessageBoxPrintf(MB_ICONERROR, TEXT("Couldn't Open File"),
+			TEXT("Could not open file %s. Please check the spelling or select a different file."), props->szFileName);
+		return FALSE;
+	}
+
+	dwFileSize = GetFileSize(hFile, NULL);
+	*buf = (CHAR *)malloc(dwFileSize);
+	ReadFile(hFile, buf, dwFileSize, NULL, NULL);
+	wsaBuf->len = dwFileSize;
+	*lpdwFileSize = dwFileSize;
 }

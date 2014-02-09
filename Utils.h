@@ -20,5 +20,6 @@
 #endif
 
 int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ...);
+int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...);
 
 #endif

@@ -134,6 +134,7 @@ DWORD WINAPI ClientSendData(VOID *params)
 	if (props->nSockType == SOCK_DGRAM)
 	{
 		setsockopt(props->socket, SOL_SOCKET, SO_SNDBUF, buf, props->nPacketSize);
+		time(&props->startTime);
 		WSASendTo(props->socket, &wsaBuf, 1, NULL, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr), (LPOVERLAPPED)props, UDPSendCompletion);
 		error = WSAGetLastError();
 
@@ -181,6 +182,8 @@ DWORD WINAPI ClientSendData(VOID *params)
 
 	free(buf);
 	closesocket(props->socket);
+
+	time(&props->endTime);
 
 	if (props->szFileName[0] == 0) // We didn't use a file, so log the stats
 		LogTransferInfo(logFile, props, sent, (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE));

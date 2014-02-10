@@ -26,12 +26,14 @@ DWORD WINAPI Serve(VOID *hwnd)
 			MessageBoxPrintf(MB_ICONERROR, TEXT("listen() Failed"), TEXT("listen() failed with socket error %d"), WSAGetLastError());
 			return 1;
 		}
-		time(&props->startTime); // Record the start time
+
 		if ((accept = WSAAccept(props->socket, NULL, NULL, NULL, NULL)) == SOCKET_ERROR)
 		{
 			MessageBoxPrintf(MB_ICONERROR, TEXT("WSAAccept Failed"), TEXT("WSAAccept() failed with socket error %d"), WSAGetLastError());
 			return 2;
 		}
+		time(&props->startTime); // Record the start time
+
 		closesocket(props->socket); // close the listening socket
 		props->socket = accept; // assign the new socket to props->socket
 		
@@ -68,6 +70,7 @@ DWORD WINAPI Serve(VOID *hwnd)
 		if (dwSleepRet != WAIT_IO_COMPLETION)
 			break; // We've lost some packets; just exit the loop
 	}
+	time(&props->endTime);
 
 	closesocket(props->socket);
 	MessageBoxPrintf(MB_ICONERROR, TEXT("Received"), TEXT("Received %d packets."), recvd);
@@ -126,13 +129,13 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		props->dwTimeout = 0;
 		return;
 	}
-	time(&props->endTime);
 	++recvd;
 
 	props->nNumToSend = ((DWORD *)wsaBuf.buf)[0]; // Hopefully this doesn't get corrupted and happen to equal recvd...
 	props->nPacketSize = dwNumberOfBytesTransfered;
 	if (recvd == props->nNumToSend)
 	{
+		time(&props->endTime);
 		props->dwTimeout = 0;
 		return;
 	}

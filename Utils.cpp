@@ -42,7 +42,9 @@ int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...)
 
 VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, DWORD dwHostMode)
 {
-	FILE *file; 
+	FILE *file;
+	time_t transferTime = props->endTime - props->startTime;
+
 	fopen_s(&file, filename, "a");
 	if (file == NULL)
 	{
@@ -53,8 +55,9 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 	if (props->nSockType == SOCK_STREAM)
 		dwSentOrRecvd /= props->nPacketSize; // Number of TCP 'packets' sent/received; necessary b/c of Nagle
 
-	fprintf(file, "Start timestamp: %llu\r\nEnd timestamp: %llu\r\nPacket size: %d bytes\r\n", props->startTime, props->endTime,
-		props->nPacketSize); 
+	fprintf(file, "Start timestamp: %llu\r\nEnd timestamp: %llu\r\nTransfer time: %ds\r\n", props->startTime, props->endTime,
+		transferTime);
+	fprintf(file, "Packet size: %d bytes\r\n", props->nPacketSize);
 	
 	if(dwHostMode == ID_HOSTTYPE_SERVER)
 		fprintf(file, "Packets received : %d\r\nPackets expected : %d\r\n", dwSentOrRecvd, props->nNumToSend);

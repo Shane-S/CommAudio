@@ -39,3 +39,26 @@ int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...)
 
 	return dwRet;
 }
+
+VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, DWORD dwHostMode)
+{
+	FILE *file; 
+	fopen_s(&file, filename, "a");
+	if (file == NULL)
+	{
+		MessageBoxPrintf(MB_ICONERROR, TEXT("Couldn't Open File"), TEXT("Couldn't open log file %s"), filename);
+		return;
+	}
+
+	if (props->nSockType == SOCK_STREAM)
+		dwSentOrRecvd /= props->nPacketSize; // Number of TCP 'packets' sent/received; necessary b/c of Nagle
+
+	if (dwHostMode == ID_HOSTTYPE_SERVER)
+		fprintf(file, "Start timestamp: %llu\r\nEnd timestamp: %llu\r\nPackets received: %d\r\nPackets expected: %d\r\nProtocol: %s\r\n\r\n",
+		props->startTime, props->endTime, dwSentOrRecvd, props->nNumToSend, (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
+	else
+		fprintf(file, "Start timestamp: %llu\r\nEnd timestamp: %llu\r\nPackets sent: %d\r\nPacket size: %d\r\nProtocol: %s\r\n\r\n",
+		props->startTime, props->endTime, dwSentOrRecvd, props->nPacketSize, (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
+
+	fclose(file);
+}

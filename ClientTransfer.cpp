@@ -1,7 +1,6 @@
 #include "ClientTransfer.h"
 
 static DWORD	sent = 0;				// Either the number of bytes or packets sent
-static time_t	startTime, endTime;		// Start and end timestamps for the transfer
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: ClientInitSocket
@@ -101,10 +100,10 @@ DWORD WINAPI ClientSendData(VOID *params)
 	HWND			hwnd		= (HWND)params;
 	LPTransferProps props		= (LPTransferProps)GetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS);
 	SOCKET			s			= props->socket;
-	BOOL			bUseFile	= FALSE;
 	WSABUF			wsaBuf;
 	CHAR			*buf;
 	DWORD			dwFileSize	= 0;
+	char			*logFile	= "SendFile.txt";
 
 	if (props->szFileName[0] != 0)
 	{
@@ -113,14 +112,18 @@ DWORD WINAPI ClientSendData(VOID *params)
 	}
 	else
 	{
-		CHAR *size = (CHAR *)&props->nNumToSend;
+		CHAR *numToSend = (CHAR *)&props->nNumToSend;
+		CHAR *size = (CHAR *)&props->nPacketSize;
 		buf = (CHAR *)malloc(props->nPacketSize);
 		memset(buf, 'a', props->nPacketSize);
 		wsaBuf.len = props->nPacketSize;
 
-		// Copy the number of packets to send into the buffer
+		// Copy the number of packets to send and their size into the buffer
 		for (int i = 0; i < sizeof(DWORD); ++i)
-			buf[i] = size[i];
+		{
+			buf[i] = numToSend[i];
+			*(buf + sizeof(DWORD)+i) = size[i];
+		}
 	}
 
 	if (buf == NULL)
@@ -152,6 +155,7 @@ DWORD WINAPI ClientSendData(VOID *params)
 		{
 			MessageBox(NULL, TEXT("Could not connect. Check settings and try again."),
 				TEXT("Could not connect to socket"), MB_ICONERROR);
+			return -1;
 		}
 		else
 		{
@@ -172,6 +176,13 @@ DWORD WINAPI ClientSendData(VOID *params)
 	free(buf);
 	closesocket(props->socket);
 	props->socket = INVALID_SOCKET;
+
+	if (props->szFileName[0] == 0) // We didn't use a file, so log the stats
+		LogTransferInfo(logFile, props, sent, (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE));
+
+	props->startTime = 0;
+	props->endTime = 0;
+	sent = 0;
 	return 0;
 }
 
@@ -202,6 +213,10 @@ VOID CALLBACK UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		closesocket(props->socket);
 		return;
 	}
+	time(&props->endTime);
+
+	if (props->startTime == 0)
+		time(&props->startTime);
 	++sent;
 }
 
@@ -256,6 +271,7 @@ BOOL LoadFile(LPWSABUF wsaBuf, const TCHAR *szFileName, char **buf, LPDWORD lpdw
 {
 	DWORD dwFileSize;
 	HANDLE hFile;
+	DWORD dwLeftover;
 	hFile = CreateFile(props->szHostName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hFile == NULL)

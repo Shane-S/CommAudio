@@ -1,8 +1,11 @@
 #ifndef ASSN2_UTILS
 #define ASSN2_UTILS
 
+#include "WinStorage.h"
 #include <Windows.h>
 #include <tchar.h>
+#include <cstdio>
+#include "resource.h"
 
 // Convert between TCHAR and char
 #ifdef UNICODE
@@ -21,5 +24,6 @@
 
 int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ...);
 int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...);
+VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, DWORD dwHostMode);
 
 #endif

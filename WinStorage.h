@@ -1,11 +1,11 @@
 #ifndef WIN_STORAGE_H
 #define WIN_STORAGE_H
 
-#include <windowsx.h>
+#include <WinSock2.h>
 #include <time.h>
 
 #define GWLP_TRANSFERPROPS	0
-#define GWLP_HOSTMODE		sizeof (LPTransferProps)
+#define GWLP_HOSTMODE		sizeof(LPTransferProps)
 #define FILENAME_SIZE		512
 #define HOSTNAME_SIZE		128
 

@@ -7,7 +7,7 @@
 #include "WinStorage.h"
 #include "Utils.h"
 
-#define BUFSIZE			65535
+#define UDP_MAXPACKET	65535
 #define COMM_TIMEOUT	5000
 
 BOOL ServerInitSocket(LPTransferProps props);

@@ -149,25 +149,23 @@ VOID SetDlgDefaults(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: HostIPDlgProc
+-- FUNCTION: FillTransferProps
 -- January 14th, 2014
 --
 -- DESIGNER: Shane Spoor
 --
 -- PROGRAMMER: Shane Spoor
 --
--- INTERFACE: INT_PTR CALLBACK HostIPDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
---				HWND hwndDlg:	Handle to the dialog window.
---				UINT uMsg:		The message being passed to this dialog box.
---				WPARAM wParam:	A general-purpose parameter that may contain information relevant to the message.
---				LPARAM lParam:	A general-purpose parameter that may contain information relevant to the message.
+-- INTERFACE: BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
+--				HWND hwndDlg:			Handle to the dialog window.
+--				DWORD dwHostMode:		The current mode that the program is in (client or server).
+--				LPTransferProps props:	Pointer to the structure holding information about the transfer.
 --
--- RETURNS: The button selected by the user; IDOK if they click "Lookup", and IDCANCEL if they click "Cancel".
+-- RETURNS: Whether the transfer properties were successfully filled.
 --
 -- NOTES:
--- Handles messages related to its controls (users clicking on radio buttons, Resolve, Cancel, etc.) and looks up the
--- IP address corresponding to a host name (or vice versa) if the user chooses to do this. The result is stored in a string
--- to be written in the main listbox.
+-- This function will the number of packets to send, the packet size (or whether to use a file), what file (if any) to use,
+-- and the protocol to be used in the transfer.
 ---------------------------------------------------------------------------------------------------------------------------*/
 BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 {
@@ -288,15 +286,39 @@ BOOL GetDlgAddrInfo(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 	return TRUE;
 }
 
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: OpenFileDlg
+-- January 14th, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: OpenFileDlg(HWND hwndDlg, DWORD dwHostMode)
+--						HWND hwndDlg:		Handle to the dialog box window.
+--						DWORD dwHostMode:	The current mode (client or server) that the host is in.
+--
+-- RETURNS: void
+--
+-- NOTES:
+-- Opens the file dialog for the user to choose a file to either read from (for sending) or write to (for received data).
+-- The file must exist if it's being used to send, but it may be a new file if it's being written to in the receive routine.
+---------------------------------------------------------------------------------------------------------------------------*/
 VOID OpenFileDlg(HWND hwndDlg, DWORD dwHostMode)
 {
 	OPENFILENAME	ofn;
 	TCHAR			szFileName[FILENAME_SIZE] = {0};
 	HWND			hwndFile = GetDlgItem(hwndDlg, ID_TEXTBOX_FILE);
 	DWORD			dwFlags = OFN_EXPLORER | OFN_FORCESHOWHIDDEN | OFN_NONETWORKBUTTON;
+	TCHAR			*szText;
 
 	if (dwHostMode == ID_HOSTTYPE_CLIENT)
+	{
 		dwFlags |= OFN_PATHMUSTEXIST;
+		szText = TEXT("Choose a File to Send");
+	}
+	else
+		szText = TEXT("Choose a File to Save to");
 
 	ofn.lStructSize			= sizeof(OPENFILENAME);
 	ofn.hwndOwner			= hwndDlg;
@@ -311,7 +333,7 @@ VOID OpenFileDlg(HWND hwndDlg, DWORD dwHostMode)
 	ofn.lpstrFileTitle		= NULL;
 	ofn.nMaxFileTitle		= NULL;
 	ofn.lpstrInitialDir		= NULL;
-	ofn.lpstrTitle			= TEXT("Choose a File to Send");
+	ofn.lpstrTitle			= szText;
 	ofn.lpstrDefExt			= NULL;
 	ofn.lCustData			= 0;
 	ofn.lpfnHook			= NULL;

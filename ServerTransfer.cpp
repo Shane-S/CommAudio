@@ -130,6 +130,7 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	++recvd;
 
 	props->nNumToSend = ((DWORD *)wsaBuf.buf)[0]; // Hopefully this doesn't get corrupted and happen to equal recvd...
+	props->nPacketSize = dwNumberOfBytesTransfered;
 	if (recvd == props->nNumToSend)
 	{
 		props->dwTimeout = 0;

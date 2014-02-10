@@ -53,12 +53,14 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 	if (props->nSockType == SOCK_STREAM)
 		dwSentOrRecvd /= props->nPacketSize; // Number of TCP 'packets' sent/received; necessary b/c of Nagle
 
-	if (dwHostMode == ID_HOSTTYPE_SERVER)
-		fprintf(file, "Start timestamp: %llu\r\nEnd timestamp: %llu\r\nPackets received: %d\r\nPackets expected: %d\r\nProtocol: %s\r\n\r\n",
-		props->startTime, props->endTime, dwSentOrRecvd, props->nNumToSend, (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
+	fprintf(file, "Start timestamp: %llu\r\nEnd timestamp: %llu\r\nPacket size: %d bytes\r\n", props->startTime, props->endTime,
+		props->nPacketSize); 
+	
+	if(dwHostMode == ID_HOSTTYPE_SERVER)
+		fprintf(file, "Packets received : %d\r\nPackets expected : %d\r\n", dwSentOrRecvd, props->nNumToSend);
 	else
-		fprintf(file, "Start timestamp: %llu\r\nEnd timestamp: %llu\r\nPackets sent: %d\r\nPacket size: %d\r\nProtocol: %s\r\n\r\n",
-		props->startTime, props->endTime, dwSentOrRecvd, props->nPacketSize, (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
+		fprintf(file, "Packets sent: %d\r\n", dwSentOrRecvd);
 
+	fprintf(file, "Protocol: %s\r\n\r\n", (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
 	fclose(file);
 }

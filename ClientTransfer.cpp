@@ -1,6 +1,7 @@
 #include "ClientTransfer.h"
 
 static DWORD	sent = 0;				// Either the number of bytes or packets sent
+static WSABUF	wsaBuf;
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: ClientInitSocket
@@ -100,10 +101,11 @@ DWORD WINAPI ClientSendData(VOID *params)
 	HWND			hwnd		= (HWND)params;
 	LPTransferProps props		= (LPTransferProps)GetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS);
 	SOCKET			s			= props->socket;
-	WSABUF			wsaBuf;
 	CHAR			*buf;
 	DWORD			dwFileSize	= 0;
-	char			*logFile	= "SendFile.txt";
+	DWORD			error;
+	DWORD			sleepRet;
+	const char		*logFile	= "SendLog.txt";
 
 	if (props->szFileName[0] != 0)
 	{
@@ -132,21 +134,23 @@ DWORD WINAPI ClientSendData(VOID *params)
 	if (props->nSockType == SOCK_DGRAM)
 	{
 		setsockopt(props->socket, SOL_SOCKET, SO_SNDBUF, buf, props->nPacketSize);
-		for (int i = 0; i < props->nNumToSend; ++i)
+		WSASendTo(props->socket, &wsaBuf, 1, NULL, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr), (LPOVERLAPPED)props, UDPSendCompletion);
+		error = WSAGetLastError();
+
+		if (error && error != WSA_IO_PENDING)
 		{
-			DWORD error;
-			if(WSASendTo(props->socket, &wsaBuf, 1, NULL, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr), 
-				(LPOVERLAPPED)props, UDPSendCompletion) == SOCKET_ERROR && (error = WSAGetLastError()) != WSA_IO_PENDING)
-			{
-				if (error = WSAENOTSOCK)
-					break;
-			}
-			SleepEx(INFINITE, TRUE);
+			MessageBox(NULL, TEXT("Could not connect. Check settings and try again."),
+			TEXT("Could not connect to socket"), MB_ICONERROR);
+			props->socket = INVALID_SOCKET;
 		}
 	}
 	else
 	{
-		if (WSAConnect(s, (sockaddr *)props->paddr_in, sizeof(sockaddr), NULL, NULL, NULL, NULL) == SOCKET_ERROR)
+		WSAConnect(s, (sockaddr *)props->paddr_in, sizeof(sockaddr), NULL, NULL, NULL, NULL);
+		time(&props->startTime);
+		error = WSAGetLastError();
+
+		if (error)
 		{
 			MessageBox(NULL, TEXT("Could not connect. Check settings and try again."),
 				TEXT("Could not connect to socket"), MB_ICONERROR);
@@ -154,29 +158,36 @@ DWORD WINAPI ClientSendData(VOID *params)
 		}
 		else
 		{
-			for (int i = 0; i < props->nNumToSend; ++i)
+			WSASend(s, &wsaBuf, 1, NULL, 0, (LPOVERLAPPED)props, TCPSendCompletion);
+			error = WSAGetLastError();
+			if(error && error != WSA_IO_PENDING)
 			{
-				DWORD error;
-				if (WSASend(s, &wsaBuf, 1, NULL, 0, (LPOVERLAPPED)props, TCPSendCompletion) == SOCKET_ERROR
-					&& (error = WSAGetLastError()) != WSA_IO_PENDING)
-				{
-					if (error = WSAENOTSOCK)
-						break;
-				}
-
+				MessageBoxPrintf(MB_ICONERROR, TEXT("WSASend() Failed"), TEXT("WSASend failed with error %d"), error);
+				props->dwTimeout = 0;
 			}
+		}
+	}
+
+	while (props->dwTimeout)
+	{
+		sleepRet = SleepEx(COMM_TIMEOUT, TRUE);
+
+		if (sleepRet != WAIT_IO_COMPLETION)
+		{
+			MessageBox(NULL, TEXT("The connection timed out."), TEXT("Timeout"), MB_ICONERROR);
+			props->dwTimeout = 0;
 		}
 	}
 
 	free(buf);
 	closesocket(props->socket);
-	props->socket = INVALID_SOCKET;
 
 	if (props->szFileName[0] == 0) // We didn't use a file, so log the stats
 		LogTransferInfo(logFile, props, sent, (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE));
 
 	props->startTime = 0;
 	props->endTime = 0;
+	props->dwTimeout = COMM_TIMEOUT;
 	sent = 0;
 	return 0;
 }
@@ -205,14 +216,22 @@ VOID CALLBACK UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	if (dwErrorCode != 0)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("sendto error"), TEXT("WSASendTo encountered error %d"), dwErrorCode);
-		closesocket(props->socket);
+		props->dwTimeout = 0;
 		return;
 	}
-	time(&props->endTime);
 
 	if (props->startTime == 0)
 		time(&props->startTime);
 	++sent;
+
+	if (sent == props->nNumToSend) // Finished sending
+	{
+		props->dwTimeout = 0;
+		time(&props->endTime);
+		return;
+	}
+
+	WSASendTo(props->socket, &wsaBuf, 1, NULL, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr), (LPOVERLAPPED)props, UDPSendCompletion);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
@@ -236,13 +255,23 @@ VOID CALLBACK TCPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
 	LPTransferProps props = (LPTransferProps)lpOverlapped;
-	if (dwErrorCode != 0)
+
+	if (dwErrorCode != 0) // Something's gone wrong; display an error message and get out of there
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("send error"), TEXT("WSASend failed with socket error %d."), dwErrorCode);
-		closesocket(props->socket);
+		props->dwTimeout = 0;
 		return;
 	}
 	sent += dwNumberOfBytesTransfered;
+
+	if (sent / props->nPacketSize == props->nNumToSend) // We're finished sending
+	{
+		props->dwTimeout = 0;
+		time(&props->endTime);
+		return;
+	}
+
+	WSASend(props->socket, &wsaBuf, 1, NULL, 0, (LPOVERLAPPED)props, TCPSendCompletion); // Post another send
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------

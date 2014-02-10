@@ -11,6 +11,7 @@ DWORD WINAPI Serve(VOID *hwnd)
 	BOOL			set		= TRUE;
 	DWORD			flags	= 0;
 	LPTransferProps props	= (LPTransferProps)GetWindowLongPtr((HWND)hwnd, GWLP_TRANSFERPROPS);
+	DWORD error, dwSleepRet;
 	char			buf[UDP_MAXPACKET];
 
 	wsaBuf.buf = buf;
@@ -33,24 +34,16 @@ DWORD WINAPI Serve(VOID *hwnd)
 		}
 		closesocket(props->socket); // close the listening socket
 		props->socket = accept; // assign the new socket to props->socket
-
-		while (1)
-		{
-			DWORD error, dwSleepRet;
-			WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props,
+		
+		WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props,
 				TCPRecvCompletion);
+		
+		error = WSAGetLastError();
 
-			if ((error = WSAGetLastError()) == WSAENOTSOCK)
-				break;
-			else if (error && error != WSA_IO_PENDING)
-			{
-				MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecv Error"), TEXT("WSARecv encountered error %d"), error);
-				break;
-			}
-
-			dwSleepRet = SleepEx(props->dwTimeout, TRUE);
-			if (dwSleepRet != WAIT_IO_COMPLETION)
-				break; // Something's gone pretty wrong here, since this is TCP
+		if (error && error != WSA_IO_PENDING)
+		{
+			MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecv Error"), TEXT("WSARecv encountered error %d"), error);
+			props->dwTimeout = 0;
 		}
 	}
 	else
@@ -58,24 +51,22 @@ DWORD WINAPI Serve(VOID *hwnd)
 		props->dwTimeout = INFINITE;
 		INT client_size = sizeof(client);
 
-		while (1)
-		{
-			DWORD error, dwSleepRet;
-			WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, (sockaddr *)&client, &client_size, (LPOVERLAPPED)props,
+		WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, (sockaddr *)&client, &client_size, (LPOVERLAPPED)props,
 				UDPRecvCompletion);
 			
-			if ((error = WSAGetLastError()) == WSAENOTSOCK)
-				break;
-			else if (error && error != WSA_IO_PENDING)
-			{
-				MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecvFrom Error"), TEXT("WSARecvFrom encountered error %d"), error);
-				break;
-			}
-			
-			dwSleepRet = SleepEx(props->dwTimeout, TRUE);
-			if(dwSleepRet != WAIT_IO_COMPLETION)
-				break; // We've lost some packets; just exit the loop
+		error = WSAGetLastError();
+		if (error && error != WSA_IO_PENDING)
+		{
+			MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecvFrom Error"), TEXT("WSARecvFrom encountered error %d"), error);
+			props->dwTimeout = 0;
 		}
+	}
+
+	while (props->dwTimeout)
+	{
+		dwSleepRet = SleepEx(props->dwTimeout, TRUE);
+		if (dwSleepRet != WAIT_IO_COMPLETION)
+			break; // We've lost some packets; just exit the loop
 	}
 
 	closesocket(props->socket);
@@ -88,7 +79,9 @@ DWORD WINAPI Serve(VOID *hwnd)
 	props->startTime = 0;
 	props->endTime = 0;
 	props->nPacketSize = 0;
+	props->nNumToSend = 0;
 	props->socket = INVALID_SOCKET;
+	props->dwTimeout = COMM_TIMEOUT;
 	return 0;
 }
 
@@ -123,10 +116,14 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 {
 	LPTransferProps props = (LPTransferProps)lpOverlapped;
 	DWORD numExpected;
+	DWORD flags = 0;
+	SOCKADDR_IN client;
+	INT client_size = sizeof(client);
+
 	if (dwErrorCode != 0)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("UDP Recv Error"), TEXT("Error receiving UDP packet; error code %d"), dwErrorCode);
-		closesocket(props->socket);
+		props->dwTimeout = 0;
 		return;
 	}
 	time(&props->endTime);
@@ -135,7 +132,7 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	props->nNumToSend = ((DWORD *)wsaBuf.buf)[0]; // Hopefully this doesn't get corrupted and happen to equal recvd...
 	if (recvd == props->nNumToSend)
 	{
-		closesocket(props->socket);
+		props->dwTimeout = 0;
 		return;
 	}
 
@@ -145,6 +142,8 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		props->dwTimeout = COMM_TIMEOUT;
 		time(&props->startTime);
 	}
+
+	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, (sockaddr *)&client, &client_size, (LPOVERLAPPED)props, UDPRecvCompletion);
 }
 
 
@@ -152,10 +151,12 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
 	LPTransferProps props = (LPTransferProps)lpOverlapped;
+	DWORD flags = 0;
+
 	if (dwErrorCode != 0)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("TCP Recv Error"), TEXT("Error receiving TCP packet; error code %d"), dwErrorCode);
-		closesocket(props->socket);
+		props->dwTimeout = 0;
 		return;
 	}
 
@@ -168,8 +169,10 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	if (dwNumberOfBytesTransfered == 0)
 	{
 		time(&props->endTime);
-		closesocket(props->socket);
+		props->dwTimeout = 0;
 		return;
 	}
+
 	recvd += dwNumberOfBytesTransfered;
+	WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
 }

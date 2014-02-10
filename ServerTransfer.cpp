@@ -25,6 +25,7 @@ DWORD WINAPI Serve(VOID *hwnd)
 			MessageBoxPrintf(MB_ICONERROR, TEXT("listen() Failed"), TEXT("listen() failed with socket error %d"), WSAGetLastError());
 			return 1;
 		}
+		time(&props->startTime); // Record the start time
 		if ((accept = WSAAccept(props->socket, NULL, NULL, NULL, NULL)) == SOCKET_ERROR)
 		{
 			MessageBoxPrintf(MB_ICONERROR, TEXT("WSAAccept Failed"), TEXT("WSAAccept() failed with socket error %d"), WSAGetLastError());
@@ -95,6 +96,8 @@ DWORD WINAPI Serve(VOID *hwnd)
 BOOL ServerInitSocket(LPTransferProps props)
 {
 	SOCKET s = WSASocket(AF_INET, props->nSockType, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
+	props->nPacketSize = 0;
+	props->nNumToSend = 0;
 
 	props->paddr_in->sin_addr.s_addr = htonl(INADDR_ANY);
 

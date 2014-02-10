@@ -112,18 +112,13 @@ DWORD WINAPI ClientSendData(VOID *params)
 	}
 	else
 	{
-		CHAR *numToSend = (CHAR *)&props->nNumToSend;
-		CHAR *size = (CHAR *)&props->nPacketSize;
 		buf = (CHAR *)malloc(props->nPacketSize);
 		memset(buf, 'a', props->nPacketSize);
 		wsaBuf.len = props->nPacketSize;
 
-		// Copy the number of packets to send and their size into the buffer
-		for (int i = 0; i < sizeof(DWORD); ++i)
-		{
-			buf[i] = numToSend[i];
-			*(buf + sizeof(DWORD)+i) = size[i];
-		}
+		// Write the packet size and number to send directly into the packet
+		((DWORD *)buf)[0] = props->nNumToSend;
+		((DWORD *)buf)[1] = props->nPacketSize;
 	}
 
 	if (buf == NULL)

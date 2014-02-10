@@ -19,8 +19,8 @@ typedef struct _TransferProps
 	TCHAR			szHostName[HOSTNAME_SIZE];
 	DWORD			nPacketSize;
 	DWORD			nNumToSend;
-	time_t			startTime;
-	time_t			endTime;
+	SYSTEMTIME		startTime;
+	SYSTEMTIME		endTime;
 	DWORD			dwTimeout;
 } TransferProps, *LPTransferProps;
 

@@ -43,7 +43,26 @@ int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...)
 VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, DWORD dwHostMode)
 {
 	FILE *file;
-	time_t transferTime = props->endTime - props->startTime;
+	FILETIME ftStartTime, ftEndTime;
+	CHAR startTimestamp[TIMESTAMP_SIZE] = { 0 }, endTimestamp[TIMESTAMP_SIZE] = { 0 };
+	ULARGE_INTEGER ulStartTime, ulEndTime, ulTransferTime;
+
+	// Jump through the ludicrous amount of hoops to get millisecond resolution on Windows
+	SystemTimeToFileTime(&props->startTime, &ftStartTime);
+	SystemTimeToFileTime(&props->endTime, &ftEndTime);
+
+	ulStartTime.QuadPart = ftStartTime.dwHighDateTime;
+	ulStartTime.QuadPart <<= 32;
+	ulStartTime.QuadPart += ftStartTime.dwLowDateTime;
+
+	ulEndTime.QuadPart = ftEndTime.dwHighDateTime;
+	ulEndTime.QuadPart <<= 32;
+	ulEndTime.QuadPart += ftEndTime.dwLowDateTime;
+
+	ulTransferTime.QuadPart = ulEndTime.QuadPart - ulStartTime.QuadPart;
+
+	CreateTimestamp(startTimestamp, &props->startTime);
+	CreateTimestamp(endTimestamp, &props->endTime);
 
 	fopen_s(&file, filename, "a");
 	if (file == NULL)
@@ -53,10 +72,11 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 	}
 
 	if (props->nSockType == SOCK_STREAM)
-		dwSentOrRecvd /= props->nPacketSize; // Number of TCP 'packets' sent/received; necessary b/c of Nagle
+		dwSentOrRecvd /= props->nPacketSize; // Number of TCP 'packets' sent/received (Nagle may have given different ones)
 
-	fprintf(file, "Start timestamp: %llu\r\nEnd timestamp: %llu\r\nTransfer time: %ds\r\n", props->startTime, props->endTime,
-		transferTime);
+	// The division by 10 000 is necessary because Windows gives the times in 100ns intervals. Why would you do that. Seriously.
+	fprintf(file, "Start timestamp: %s\r\nEnd timestamp: %s\r\nTransfer time: %dms\r\n", startTimestamp, endTimestamp,
+		ulTransferTime.QuadPart / 10000);
 	fprintf(file, "Packet size: %d bytes\r\n", props->nPacketSize);
 	
 	if(dwHostMode == ID_HOSTTYPE_SERVER)
@@ -66,4 +86,11 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 
 	fprintf(file, "Protocol: %s\r\n\r\n", (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
 	fclose(file);
+}
+
+
+VOID CreateTimestamp(char *buf, SYSTEMTIME *time)
+{
+	sprintf_s(buf, TIMESTAMP_SIZE, "%d-%02d-%02dT%02d:%02d:%02d:%03dTZD", time->wYear, time->wMonth, time->wDay, time->wHour, 
+		time->wMinute, time->wSecond, time->wMilliseconds);
 }

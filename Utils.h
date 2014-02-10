@@ -7,6 +7,8 @@
 #include <cstdio>
 #include "resource.h"
 
+#define TIMESTAMP_SIZE 27
+
 // Convert between TCHAR and char
 #ifdef UNICODE
 #define TCHAR_2_CHAR(dest, src, bufsize) \
@@ -25,5 +27,6 @@
 int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ...);
 int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...);
 VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, DWORD dwHostMode);
+VOID CreateTimestamp(char *buf, SYSTEMTIME *time);
 
 #endif

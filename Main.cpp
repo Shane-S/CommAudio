@@ -82,8 +82,8 @@ LPTransferProps CreateTransferProps()
 
 	memset(&props->wsaOverlapped, 0, sizeof(WSAOVERLAPPED));
 
-	props->startTime = 0;
-	props->endTime = 0;
+	memset(&props->startTime, 0, sizeof(SYSTEMTIME));
+	memset(&props->endTime, 0, sizeof(SYSTEMTIME));
 
 	props->dwTimeout = COMM_TIMEOUT;
 	return props;

@@ -134,7 +134,7 @@ DWORD WINAPI ClientSendData(VOID *params)
 	if (props->nSockType == SOCK_DGRAM)
 	{
 		setsockopt(props->socket, SOL_SOCKET, SO_SNDBUF, buf, props->nPacketSize);
-		time(&props->startTime);
+		GetSystemTime(&props->startTime);
 		WSASendTo(props->socket, &wsaBuf, 1, NULL, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr), (LPOVERLAPPED)props, UDPSendCompletion);
 		error = WSAGetLastError();
 
@@ -148,7 +148,7 @@ DWORD WINAPI ClientSendData(VOID *params)
 	else
 	{
 		WSAConnect(s, (sockaddr *)props->paddr_in, sizeof(sockaddr), NULL, NULL, NULL, NULL);
-		time(&props->startTime);
+		GetSystemTime(&props->startTime);
 		error = WSAGetLastError();
 
 		if (error)
@@ -183,13 +183,11 @@ DWORD WINAPI ClientSendData(VOID *params)
 	free(buf);
 	closesocket(props->socket);
 
-	time(&props->endTime);
-
 	if (props->szFileName[0] == 0) // We didn't use a file, so log the stats
 		LogTransferInfo(logFile, props, sent, (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE));
 
-	props->startTime = 0;
-	props->endTime = 0;
+	memset(&props->startTime, 0, sizeof(SYSTEMTIME));
+	memset(&props->endTime, 0, sizeof(SYSTEMTIME));
 	props->dwTimeout = COMM_TIMEOUT;
 	sent = 0;
 	return 0;
@@ -223,14 +221,14 @@ VOID CALLBACK UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		return;
 	}
 
-	if (props->startTime == 0)
-		time(&props->startTime);
+	if (props->startTime.wDay == 0)
+		GetSystemTime(&props->startTime);
 	++sent;
 
 	if (sent == props->nNumToSend) // Finished sending
 	{
+		GetSystemTime(&props->endTime);
 		props->dwTimeout = 0;
-		time(&props->endTime);
 		return;
 	}
 
@@ -270,7 +268,7 @@ VOID CALLBACK TCPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	if (sent / props->nPacketSize == props->nNumToSend) // We're finished sending
 	{
 		props->dwTimeout = 0;
-		time(&props->endTime);
+		GetSystemTime(&props->endTime);
 		return;
 	}
 

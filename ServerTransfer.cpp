@@ -32,7 +32,7 @@ DWORD WINAPI Serve(VOID *hwnd)
 			MessageBoxPrintf(MB_ICONERROR, TEXT("WSAAccept Failed"), TEXT("WSAAccept() failed with socket error %d"), WSAGetLastError());
 			return 2;
 		}
-		time(&props->startTime); // Record the start time
+		GetSystemTime(&props->startTime); // Record the start time
 
 		closesocket(props->socket); // close the listening socket
 		props->socket = accept; // assign the new socket to props->socket
@@ -70,7 +70,7 @@ DWORD WINAPI Serve(VOID *hwnd)
 		if (dwSleepRet != WAIT_IO_COMPLETION)
 			break; // We've lost some packets; just exit the loop
 	}
-	time(&props->endTime);
+	GetSystemTime(&props->endTime);
 
 	closesocket(props->socket);
 	MessageBoxPrintf(MB_ICONERROR, TEXT("Received"), TEXT("Received %d packets."), recvd);
@@ -79,8 +79,8 @@ DWORD WINAPI Serve(VOID *hwnd)
 	LogTransferInfo("ReceiveLog.txt", props, recvd, GetWindowLongPtr((HWND)hwnd, GWLP_HOSTMODE));
 
 	recvd = 0;
-	props->startTime = 0;
-	props->endTime = 0;
+	memset(&props->startTime, 0, sizeof(SYSTEMTIME));
+	memset(&props->endTime, 0, sizeof(SYSTEMTIME));
 	props->nPacketSize = 0;
 	props->nNumToSend = 0;
 	props->socket = INVALID_SOCKET;
@@ -135,7 +135,7 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	props->nPacketSize = dwNumberOfBytesTransfered;
 	if (recvd == props->nNumToSend)
 	{
-		time(&props->endTime);
+		GetSystemTime(&props->endTime);
 		props->dwTimeout = 0;
 		return;
 	}
@@ -144,7 +144,7 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	if (props->dwTimeout == INFINITE)
 	{
 		props->dwTimeout = COMM_TIMEOUT;
-		time(&props->startTime);
+		GetSystemTime(&props->startTime);
 	}
 
 	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, (sockaddr *)&client, &client_size, (LPOVERLAPPED)props, UDPRecvCompletion);
@@ -172,7 +172,7 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 
 	if (dwNumberOfBytesTransfered == 0)
 	{
-		time(&props->endTime);
+		GetSystemTime(&props->endTime);
 		props->dwTimeout = 0;
 		return;
 	}

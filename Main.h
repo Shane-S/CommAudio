@@ -15,5 +15,6 @@
 #define DEF_NUMTOSEND	10
 
 LPTransferProps CreateTransferProps();
+int WINAPI WinMain(HINSTANCE hPrevInstance, HINSTANCE hInstance, LPSTR lpszCmdArgs, int iCmdShow);
 
 #endif

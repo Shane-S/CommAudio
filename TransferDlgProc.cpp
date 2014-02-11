@@ -1,32 +1,35 @@
 /*----------------------------------------------------------------------------------------------------------------------
--- SOURCE FILE: HostIPDlg.cpp
+-- SOURCE FILE: TransferDlgProc.cpp
 --
--- PROGRAM: Assn1
+-- PROGRAM: Assn2
 --
 -- FUNCTIONS:
--- INT_PTR CALLBACK HostIPDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
--- VOID HostIPSetSelect(const DWORD dwSelected, const HWND hwndDlg)
+-- INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
+-- VOID SetDlgDefaults(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props);
+-- BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props);
+-- BOOL GetDlgAddrInfo(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props);
+-- VOID OpenFileDlg(HWND hwndDlg, DWORD dwHostMode);
 --
--- DATE: January 14th, 2014
+-- DATE: January 30th, 2014
 --
 -- DESIGNER: Shane Spoor
 --
 -- PROGRAMMER: Shane Spoor
 --
--- NOTES:	This file contains functions to manage a dialog box with which the user can determine the IP address for a
---			a given host name, or the host name for a given port IP address.
+-- NOTES:	This file contains functions to manage a dialog box which the user can use to set transfer properties.
 -------------------------------------------------------------------------------------------------------------------------*/
 #include "TransferDlgProc.h"
 
 /*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: HostIPDlgProc
--- January 14th, 2014
+-- FUNCTION: TransferDlgProc
+-- 
+-- DATE: January 30th, 2014
 --
 -- DESIGNER: Shane Spoor
 --
 -- PROGRAMMER: Shane Spoor
 --
--- INTERFACE: INT_PTR CALLBACK HostIPDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
+-- INTERFACE: INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
 --				HWND hwndDlg:	Handle to the dialog window.
 --				UINT uMsg:		The message being passed to this dialog box.
 --				WPARAM wParam:	A general-purpose parameter that may contain information relevant to the message.
@@ -36,8 +39,8 @@
 --
 -- NOTES:
 -- Handles messages related to its controls (users clicking on radio buttons, Resolve, Cancel, etc.) and looks up the
--- IP address corresponding to a host name (or vice versa) if the user chooses to do this. The result is stored in a string
--- to be written in the main listbox.
+-- fills the transfer properties when the user clicks okay. If an error prevents the properties from being filled, the dialog.
+-- is kept open.
 ---------------------------------------------------------------------------------------------------------------------------*/
 INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
@@ -72,7 +75,8 @@ INT_PTR CALLBACK TransferDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM 
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: SetDlgDefaults
--- January 14th, 2014
+--
+-- DATE: January 30th, 2014
 --
 -- DESIGNER: Shane Spoor
 --
@@ -150,7 +154,8 @@ VOID SetDlgDefaults(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: FillTransferProps
--- January 14th, 2014
+--
+-- DATE: January 31st, 2014
 --
 -- DESIGNER: Shane Spoor
 --
@@ -222,7 +227,8 @@ BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: GetDlgAddrInfo
--- January 14th, 2014
+-- 
+-- DATE: January 31st, 2014
 --
 -- DESIGNER: Shane Spoor
 --
@@ -288,7 +294,8 @@ BOOL GetDlgAddrInfo(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: OpenFileDlg
--- January 14th, 2014
+--
+-- DATE: January 31st, 2014
 --
 -- DESIGNER: Shane Spoor
 --

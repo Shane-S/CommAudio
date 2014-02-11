@@ -7,8 +7,10 @@
 #include "WinStorage.h"
 #include "Utils.h"
 
-#define UDP_MAXPACKET	65535
-#define COMM_TIMEOUT	5000
+#define UDP_MAXPACKET	65535	// The maximum datagram size
+#ifndef COMM_TIMEOUT			// Time to wait before giving up (used mostly for UDP)
+	#define COMM_TIMEOUT 5000
+#endif
 
 BOOL ServerInitSocket(LPTransferProps props);
 DWORD WINAPI Serve(VOID *hwnd);

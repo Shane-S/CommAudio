@@ -1,7 +1,43 @@
+/*----------------------------------------------------------------------------------------------------------------------
+-- SOURCE FILE: WndProc.cpp
+--
+-- PROGRAM: Assn2
+--
+-- FUNCTIONS:
+-- INT_PTR CALLBACK HostIPDlgProc(_In_ HWND hwndDlg, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
+-- VOID HostIPSetSelect(const DWORD dwSelected, const HWND hwndDlg)
+--
+-- DATE: January 14th, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- NOTES:	This file contains functions to manage a dialog box with which the user can determine the IP address for a
+--			a given host name, or the host name for a given port IP address.
+-------------------------------------------------------------------------------------------------------------------------*/
+
 #include "WndProc.h"
 
-extern LPTransferProps props;
-
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: MessageBoxPrintf
+-- Febrary 7th, 2014
+--
+-- DESIGNER: Charles Petzold
+--
+-- PROGRAMMER: Charles Petzold
+--
+-- INTERFACE: LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
+--										HWND hwnd:		Handle the to the window for which the messsages are destined.
+--										UINT uMsg:		The message code.
+--										WPARAM wParam:	Contains a message-specific value.
+--										LPARAM lParam:	Contains a message-specific value.
+--
+-- RETURNS: 0 if the the message was handled here, or some other int if it was handled by DefWndProc.
+--
+-- NOTES:
+-- Handles manipulation of the menu items and the user quitting. All other functions are handled by DefWndProc.
+---------------------------------------------------------------------------------------------------------------------------*/
 LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
 	switch (uMsg)

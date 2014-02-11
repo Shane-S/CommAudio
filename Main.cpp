@@ -1,6 +1,45 @@
+/*----------------------------------------------------------------------------------------------------------------------
+-- SOURCE FILE: Main.cpp
+--
+-- PROGRAM: Assn2
+--
+-- FUNCTIONS:
+-- LPTransferProps CreateTransferProps();
+-- int WINAPI WinMain(HINSTANCE hPrevInstance, HINSTANCE hInstance, LPSTR lpszCmdArgs, int iCmdShow);
+--
+-- DATE: February 1st, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- NOTES: This file contains functions that set up the window and transfer properties for use. It is also the entry point
+--		  to the program.
+-------------------------------------------------------------------------------------------------------------------------*/
+
 #include "Main.h"
 #include "WndProc.h"
 
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: WinMain
+-- January 30th, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: int WINAPI WinMain(HINSTANCE hPrevInstance, HINSTANCE hInstance, LPSTR lpszCmdArgs, int iCmdShow)
+--								HINSTANCE hPrevInstance:	Handle to the a previous copy of the program (not used here).
+--								HINSTANCE hInstance:		Handle to the current instance of the program.
+--								LPSTR lpszCmdArgs:			Pointer to the command arguments (if any).
+--								int iCmdShow:				Determines how the window will be shown.
+--
+-- RETURNS: void
+--
+-- NOTES:
+-- This is the entry point to the program. It sets up the window, creates a TransferProps structure, and sets the default
+-- host mode before displaying the GUI.
+---------------------------------------------------------------------------------------------------------------------------*/
 int WINAPI WinMain(HINSTANCE hPrevInstance, HINSTANCE hInstance, LPSTR lpszCmdArgs, int iCmdShow)
 {
 	HWND			hwnd;
@@ -53,6 +92,23 @@ int WINAPI WinMain(HINSTANCE hPrevInstance, HINSTANCE hInstance, LPSTR lpszCmdAr
 	return msg.wParam;
 }
 
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: CreateTransferProps
+-- 
+-- DATE: Febrary 1st, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: CreateTransferProps()
+--
+-- RETURNS: A pointer to a TransferProps structure, or NULL if the structure couldn't be created (due to insufficient memory).
+--
+-- NOTES:
+-- This function allocates memory for and initialises a TransferProps structure. It sets the default transfer properties
+-- which will be used in case the user decides to begin transferrring without actually choosing options.
+---------------------------------------------------------------------------------------------------------------------------*/
 LPTransferProps CreateTransferProps()
 {
 	LPTransferProps props = (LPTransferProps)malloc(sizeof(TransferProps));

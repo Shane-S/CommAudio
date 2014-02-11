@@ -4,11 +4,12 @@
 #include <WinSock2.h>
 #include <time.h>
 
-#define GWLP_TRANSFERPROPS	0
-#define GWLP_HOSTMODE		sizeof(LPTransferProps)
-#define FILENAME_SIZE		512
-#define HOSTNAME_SIZE		128
+#define GWLP_TRANSFERPROPS	0						// Offset value to access the transfer props pointer in wndExtra 
+#define GWLP_HOSTMODE		sizeof(LPTransferProps)	// Offset value to access the host mode pointer in wndExtra
+#define FILENAME_SIZE		512						// The max file name size (in bytes)
+#define HOSTNAME_SIZE		128						// The max host name size (in bytes)
 
+/* This structure contains the properties necessary to perform a transfer. */
 typedef struct _TransferProps
 {
 	WSAOVERLAPPED	wsaOverlapped;

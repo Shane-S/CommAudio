@@ -93,8 +93,8 @@ int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...)
 	va_end(pArgList);
 
 	dwRet = DrawText(hdc, szBuffer, _tcslen(szBuffer), &clientRect, DT_CALCRECT);
-	InvalidateRect(hwnd, NULL, TRUE);
-	UpdateWindow(hwnd);
+	//InvalidateRect(hwnd, &clientRect, TRUE);
+	//UpdateWindow(hwnd);
 	ReleaseDC(hwnd, hdc);
 
 	return dwRet;

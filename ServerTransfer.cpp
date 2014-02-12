@@ -6,6 +6,10 @@
 -- FUNCTIONS:
 -- BOOL ServerInitSocket(LPTransferProps props);
 -- DWORD WINAPI Serve(VOID *hwnd);
+-- VOID ServerCleanup(LPTransferProps props);
+-- BOOL ListenTCP(LPTransferProps props);
+-- BOOL ListenUDP(LPTransferProps props);
+-- 
 -- VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 --		LPOVERLAPPED lpOverlapped, DWORD dwFlags);
 -- VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
@@ -18,8 +22,9 @@
 -- PROGRAMMER: Shane Spoor
 --
 -- NOTES:	Functions in this file compose the server side of the program. Serve is the server thread, ServerInitSocket
---			initialises a server socket, and the other two functions are completion routines called by Windows when data
---			is received.
+--			initialises a server socket, and ServerCleanup resets the transfer state variables to their defaults. The two
+--			Listen functions handle incoming connections for TCP and UDP. The two callback functions are completion 
+--			routines called by Windows when the server receives data.
 -------------------------------------------------------------------------------------------------------------------------*/
 
 #include "ServerTransfer.h"
@@ -27,107 +32,6 @@
 // "Global" variables (used only in this file)
 static DWORD	recvd	= 0;	// The number of bytes or packets received
 static WSABUF	wsaBuf;			// A buffer to contain the received data
-
-/*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: Serve
--- Febrary 6th, 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: Serve(VOID *hwnd)
---					VOID *hwnd: Handle to the parent window.
---
--- RETURNS: A status code inidicating the thread's state when it exited. This is a positive integer if an error occurred,
---			or zero if the thread ran successfully.
---
--- NOTES:
--- Listens for incoming connection requests/packets. Once a connection has been established or a packet received, the
--- thread continues to receive the packets until there are no more to receive (UDP) or the client sends FIN, ACK (TCP).
----------------------------------------------------------------------------------------------------------------------------*/
-DWORD WINAPI Serve(VOID *hwnd)
-{
-	SOCKADDR_IN		client;
-	BOOL			set		= TRUE;
-	DWORD			flags	= 0;
-	LPTransferProps props	= (LPTransferProps)GetWindowLongPtr((HWND)hwnd, GWLP_TRANSFERPROPS);
-	DWORD error, dwSleepRet;
-	char			buf[UDP_MAXPACKET];
-
-	wsaBuf.buf = buf;
-	wsaBuf.len = UDP_MAXPACKET;
-	setsockopt(props->socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&set, sizeof(int));
-
-	if (props->nSockType == SOCK_STREAM)
-	{
-		SOCKET accept;
-		if (listen(props->socket, 5) == SOCKET_ERROR)
-		{
-			MessageBoxPrintf(MB_ICONERROR, TEXT("listen() Failed"), TEXT("listen() failed with socket error %d"), WSAGetLastError());
-			return 1;
-		}
-
-		if ((accept = WSAAccept(props->socket, NULL, NULL, NULL, NULL)) == SOCKET_ERROR)
-		{
-			MessageBoxPrintf(MB_ICONERROR, TEXT("WSAAccept Failed"), TEXT("WSAAccept() failed with socket error %d"), WSAGetLastError());
-			return 2;
-		}
-		GetSystemTime(&props->startTime); // Record the start time
-
-		closesocket(props->socket); // close the listening socket
-		props->socket = accept; // assign the new socket to props->socket
-		
-		WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props,
-				TCPRecvCompletion);
-		
-		error = WSAGetLastError();
-
-		if (error && error != WSA_IO_PENDING)
-		{
-			MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecv Error"), TEXT("WSARecv encountered error %d"), error);
-			props->dwTimeout = 0;
-		}
-	}
-	else
-	{
-		props->dwTimeout = INFINITE;
-		INT client_size = sizeof(client);
-
-		WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, (sockaddr *)&client, &client_size, (LPOVERLAPPED)props,
-				UDPRecvCompletion);
-			
-		error = WSAGetLastError();
-		if (error && error != WSA_IO_PENDING)
-		{
-			MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecvFrom Error"), TEXT("WSARecvFrom encountered error %d"), error);
-			props->dwTimeout = 0;
-		}
-	}
-
-	while (props->dwTimeout)
-	{
-		dwSleepRet = SleepEx(props->dwTimeout, TRUE);
-		if (dwSleepRet != WAIT_IO_COMPLETION)
-			break; // We've lost some packets; just exit the loop
-	}
-
-	closesocket(props->socket);
-	MessageBoxPrintf(MB_ICONERROR, TEXT("Received"), TEXT("Received %d packets."), recvd);
-	DrawTextPrintf((HWND)hwnd, TEXT("Received %d packets."), recvd);
-	
-	if (props->szFileName[0] == 0)
-		LogTransferInfo("ReceiveLog.txt", props, recvd, GetWindowLongPtr((HWND)hwnd, GWLP_HOSTMODE));
-
-	recvd = 0;
-	memset(&props->startTime, 0, sizeof(SYSTEMTIME));
-	memset(&props->endTime, 0, sizeof(SYSTEMTIME));
-	props->nPacketSize	= 0;
-	props->nNumToSend	= 0;
-	props->socket		= INVALID_SOCKET;
-	props->dwTimeout	= COMM_TIMEOUT;
-	return 0;
-}
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: ServerInitSocket
@@ -173,6 +77,65 @@ BOOL ServerInitSocket(LPTransferProps props)
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: Serve
+-- Febrary 6th, 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: Serve(VOID *hwnd)
+--					VOID *hwnd: Handle to the parent window.
+--
+-- RETURNS: A status code inidicating the thread's state when it exited. This is a positive integer if an error occurred,
+--			or zero if the thread ran successfully.
+--
+-- NOTES:
+-- Listens for incoming connection requests/packets. Once a connection has been established or a packet received, the
+-- thread continues to receive the packets until there are no more to receive (UDP) or the client sends FIN, ACK (TCP).
+---------------------------------------------------------------------------------------------------------------------------*/
+DWORD WINAPI Serve(VOID *hwnd)
+{
+	BOOL			set		= TRUE;
+	DWORD			flags	= 0;
+	LPTransferProps props	= (LPTransferProps)GetWindowLongPtr((HWND)hwnd, GWLP_TRANSFERPROPS);
+	DWORD			dwSleepRet;
+	SOCKADDR_IN		client;
+	char			buf[UDP_MAXPACKET];
+
+	wsaBuf.buf = buf;
+	wsaBuf.len = UDP_MAXPACKET;
+	setsockopt(props->socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&set, sizeof(int));
+
+	if (props->nSockType == SOCK_STREAM && !ListenTCP(props))
+	{
+		ServerCleanup(props);
+		return 1;
+	}
+	else if (props->nSockType == SOCK_DGRAM && !ListenUDP(props, &client))
+	{
+		ServerCleanup(props);
+		return 2;
+	}
+
+	while (props->dwTimeout)
+	{
+		dwSleepRet = SleepEx(props->dwTimeout, TRUE);
+		if (dwSleepRet != WAIT_IO_COMPLETION)
+			break; // We've lost some packets; just exit the loop
+	}
+
+	MessageBoxPrintf(MB_ICONERROR, TEXT("Received"), TEXT("Received %d packets."), recvd);
+	DrawTextPrintf((HWND)hwnd, TEXT("Received %d packets."), recvd);
+	
+	if (props->szFileName[0] == 0)
+		LogTransferInfo("ReceiveLog.txt", props, recvd, GetWindowLongPtr((HWND)hwnd, GWLP_HOSTMODE));
+
+	ServerCleanup(props);
+	return 0;
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: UDPRecvCompletion
 -- Febrary 7th, 2014
 --
@@ -198,7 +161,7 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
 	LPTransferProps props = (LPTransferProps)lpOverlapped;
-	DWORD numExpected;
+	static BOOL		useFile = props->szFileName[0] != 0;
 	DWORD flags = 0;
 	SOCKADDR_IN client;
 	INT client_size = sizeof(client);
@@ -211,9 +174,16 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	}
 	++recvd;
 
-	props->nNumToSend = ((DWORD *)wsaBuf.buf)[0]; // Hopefully this doesn't get corrupted and happen to equal recvd...
+	props->nNumToSend = ((DWORD *)wsaBuf.buf)[0];
 	props->nPacketSize = dwNumberOfBytesTransfered;
 	GetSystemTime(&props->endTime);
+
+	if (useFile)
+	{
+		// Write to the file
+	}
+	
+	// Finished receiving
 	if (recvd == props->nNumToSend)
 	{
 		props->dwTimeout = 0;
@@ -255,8 +225,9 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
-	LPTransferProps props = (LPTransferProps)lpOverlapped;
-	DWORD flags = 0;
+	LPTransferProps props	= (LPTransferProps)lpOverlapped;
+	static BOOL		useFile = props->szFileName[0] != 0;
+	DWORD			flags	= 0;
 
 	if (dwErrorCode != 0)
 	{
@@ -280,4 +251,124 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 
 	recvd += dwNumberOfBytesTransfered;
 	WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: ServerCleanup
+-- Febrary 10th 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: ServerCleanup(LPTransferProps props)
+--							LPTransferProps props:  Pointer to the TransferProps structure containing the details for this
+--													transfer.
+--
+-- RETURNS: void
+--
+-- NOTES:
+-- Resets all parameters used in the transfer to their default values in preparation for receiving again.
+---------------------------------------------------------------------------------------------------------------------------*/
+VOID ServerCleanup(LPTransferProps props)
+{
+	recvd = 0;
+	memset(&props->startTime, 0, sizeof(SYSTEMTIME));
+	memset(&props->endTime, 0, sizeof(SYSTEMTIME));
+	props->nPacketSize = 0;
+	props->nNumToSend = 0;
+	props->socket = INVALID_SOCKET;
+	props->dwTimeout = COMM_TIMEOUT;
+	closesocket(props->socket);
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: ListenTCP
+-- Febrary 10th 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: ListenTCP(LPTransferProps props)
+--						LPTransferProps props:  Pointer to the TransferProps structure containing the details for this
+--													transfer.
+--
+-- RETURNS: void
+--
+-- NOTES:
+-- Listens for and accepts a TCP connection, then posts a WSARecv on the socket to activate the completion routine.
+---------------------------------------------------------------------------------------------------------------------------*/
+BOOL ListenTCP(LPTransferProps props)
+{
+	SOCKET accept;
+	DWORD flags = 0, error = 0;
+
+	if (listen(props->socket, 5) == SOCKET_ERROR)
+	{
+		MessageBoxPrintf(MB_ICONERROR, TEXT("listen() Failed"), TEXT("listen() failed with socket error %d"), WSAGetLastError());
+		return FALSE;
+	}
+
+	if ((accept = WSAAccept(props->socket, NULL, NULL, NULL, NULL)) == SOCKET_ERROR)
+	{
+		MessageBoxPrintf(MB_ICONERROR, TEXT("WSAAccept Failed"), TEXT("WSAAccept() failed with socket error %d"), WSAGetLastError());
+		return FALSE;
+	}
+	GetSystemTime(&props->startTime); // Record the start time
+
+	closesocket(props->socket); // close the listening socket
+	props->socket = accept;		// assign the new socket to props->socket
+
+	WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
+
+	error = WSAGetLastError();
+
+	if (error && error != WSA_IO_PENDING)
+	{
+		MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecv Error"), TEXT("WSARecv encountered error %d"), error);
+		props->dwTimeout = 0;
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/*-------------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: ListenUDP
+-- Febrary 10th 2014
+--
+-- DESIGNER: Shane Spoor
+--
+-- PROGRAMMER: Shane Spoor
+--
+-- INTERFACE: ListenUDP(LPTransferProps props, LPSOCKADDR_IN client)
+--							LPTransferProps props:  Pointer to the TransferProps structure containing the details for this
+--													transfer.
+--							LPSOCKADDR_IN	client:	Pointer to a SOCKADDR_IN structure to hold the client's info. This must
+--													be passed from the thread to ensure that it's in scope when the
+--													completion routine is called.
+--
+-- RETURNS: void
+--
+-- NOTES:
+-- Posts a receive request on the socket to wait for a UDP packet.
+---------------------------------------------------------------------------------------------------------------------------*/
+BOOL ListenUDP(LPTransferProps props, LPSOCKADDR_IN client)
+{
+	DWORD		flags = 0, error = 0;
+	INT			client_size = sizeof(*client);
+
+	props->dwTimeout = INFINITE;
+
+	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, (sockaddr *)client, &client_size, (LPOVERLAPPED)props,
+		UDPRecvCompletion);
+
+	error = WSAGetLastError();
+	if (error && error != WSA_IO_PENDING)
+	{
+		MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecvFrom Error"), TEXT("WSARecvFrom encountered error %d"), error);
+		props->dwTimeout = 0;
+		return FALSE;
+	}
+	return TRUE;
 }

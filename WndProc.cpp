@@ -86,6 +86,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In
 		}
 		return 0;
 	case WM_DESTROY:
+		free((void *)GetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS));
 		PostQuitMessage(0);
 		return 0;
 	}

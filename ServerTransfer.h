@@ -14,6 +14,9 @@
 
 BOOL ServerInitSocket(LPTransferProps props);
 DWORD WINAPI Serve(VOID *hwnd);
+BOOL ListenTCP(LPTransferProps props);
+BOOL ListenUDP(LPTransferProps props, LPSOCKADDR_IN client);
+VOID ServerCleanup(LPTransferProps props);
 
 // Completion routine prototypes
 VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,

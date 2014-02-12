@@ -6,11 +6,19 @@
 -- FUNCTIONS:
 -- BOOL ClientInitSocket(LPTransferProps props);
 -- DWORD WINAPI ClientSendData(VOID *hwnd);
+-- VOID ClientCleanup(LPTransferProps props);
+-- BOOL TCPSendFirst(LPTransferProps props);
+-- BOOL UDPSendFirst(LPTransferProps props);
+--
 -- VOID CALLBACK UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 --		LPOVERLAPPED lpOverlapped, DWORD dwFlags);
 -- VOID CALLBACK TCPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 --		LPOVERLAPPED lpOverlapped, DWORD dwFlags);
+--
 -- BOOL LoadFile(LPWSABUF wsaBuf, const TCHAR *szFileName, char **buf, LPDWORD lpdwFileSize, LPTransferProps props);
+-- BOOL PopulateBuffer(LPWSABUF pwsaBuf, LPTransferProps props, LPDWORD lpdwFileSize);
+-- CHAR *CreateBuffer(CHAR data, LPTransferProps props);
+--
 --
 -- DATE: February 2nd, 2014
 --
@@ -19,7 +27,7 @@
 -- PROGRAMMER: Shane Spoor
 --
 -- NOTES:	Functions in this file compose the client side of the program. ClientSendData where the data is transferred,
---			ClientInitSocket preps a socket for sending, the two callback functions are completion routines called by
+--			ClientInitSocket preps a socket for sending, and ClientCleanup frees all allocated memory and the two callback functions are completion routines called by
 --			Windows when data was sent, and LoadFile loads a user-specified file into the sending buffer.
 -------------------------------------------------------------------------------------------------------------------------*/
 
@@ -382,15 +390,15 @@ BOOL LoadFile(LPWSABUF wsaBuf, const TCHAR *szFileName, LPDWORD lpdwFileSize, LP
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: ClientSendData
+-- FUNCTION: CreateBuffer
 -- Febrary 1st, 2014
 --
 -- DESIGNER: Shane Spoor
 --
 -- PROGRAMMER: Shane Spoor
 --
--- INTERFACE: ClientSendData(VOID *params)
---							VOID *params: Handle to the main window cast as a VOID *.
+-- INTERFACE: CreateBuffer(CHAR data, LPTransferProps props)
+--							CHAR data: Handle to the main window cast as a VOID *.
 --
 -- RETURNS: A positive int if the connection fails (TCP), the user-specified file couldn't be opened, or the buffer couldn't be
 --			allocated. Returns 0 on successful sending.
@@ -415,21 +423,22 @@ CHAR *CreateBuffer(CHAR data, LPTransferProps props)
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: ClientSendData
+-- FUNCTION: PopulateBuffer
 -- Febrary 1st, 2014
 --
 -- DESIGNER: Shane Spoor
 --
 -- PROGRAMMER: Shane Spoor
 --
--- INTERFACE: ClientSendData(VOID *params)
---							VOID *params: Handle to the main window cast as a VOID *.
+-- INTERFACE: PopulateBuffer(LPWSABUF pwsaBuf, LPTransferProps props, LPDWORD lpdwFileSize)
+--							LPWSABUF wsaBuf:		The WSA buffer to populate with data.
+--							LPTransferProps props:	Pointer to the TransferProps structure containing details about the transfer.
+--							LPDWORD dwFileSize:		Pointer to a DWORD to store the file size.
 --
--- RETURNS: A positive int if the connection fails (TCP), the user-specified file couldn't be opened, or the buffer couldn't be
---			allocated. Returns 0 on successful sending.
+-- RETURNS: False if the one of the functions failed; true otherwise.
 --
 -- NOTES:
--- Sends either a chosen file (if there is one) or a specified number of packets of the specified size.
+-- Populates the send buffer with either a file or random data.
 ---------------------------------------------------------------------------------------------------------------------------*/
 BOOL PopulateBuffer(LPWSABUF pwsaBuf, LPTransferProps props, LPDWORD lpdwFileSize)
 {
@@ -450,18 +459,17 @@ BOOL PopulateBuffer(LPWSABUF pwsaBuf, LPTransferProps props, LPDWORD lpdwFileSiz
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: ClientSendData
--- Febrary 1st, 2014
+-- FUNCTION: ClientCleanup
+-- Febrary 9th, 2014
 --
 -- DESIGNER: Shane Spoor
 --
 -- PROGRAMMER: Shane Spoor
 --
--- INTERFACE: ClientSendData(VOID *params)
---							VOID *params: Handle to the main window cast as a VOID *.
+-- INTERFACE: ClientCleanup(LPTranserProps props)
+--							LPTransferProps props: 
 --
--- RETURNS: A positive int if the connection fails (TCP), the user-specified file couldn't be opened, or the buffer couldn't be
---			allocated. Returns 0 on successful sending.
+-- RETURNS: void
 --
 -- NOTES:
 -- Sends either a chosen file (if there is one) or a specified number of packets of the specified size.

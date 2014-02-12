@@ -32,6 +32,7 @@
 // "Global" variables (used only in this file)
 static DWORD	recvd	= 0;	// The number of bytes or packets received
 static WSABUF	wsaBuf;			// A buffer to contain the received data
+static HANDLE	destFile;		// A file to store the transferred data (if specified by the user)
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: ServerInitSocket
@@ -55,6 +56,7 @@ static WSABUF	wsaBuf;			// A buffer to contain the received data
 BOOL ServerInitSocket(LPTransferProps props)
 {
 	SOCKET s = WSASocket(AF_INET, props->nSockType, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
+	BOOL set = TRUE;
 	props->nPacketSize = 0;
 	props->nNumToSend = 0;
 
@@ -71,7 +73,6 @@ BOOL ServerInitSocket(LPTransferProps props)
 		MessageBoxPrintf(MB_ICONERROR, TEXT("bind Failed"), TEXT("Could not bind socket, error %d"), WSAGetLastError());
 		return FALSE;
 	}
-	DWORD error = WSAGetLastError();
 	props->socket = s;
 	return TRUE;
 }
@@ -105,7 +106,16 @@ DWORD WINAPI Serve(VOID *hwnd)
 
 	wsaBuf.buf = buf;
 	wsaBuf.len = UDP_MAXPACKET;
-	setsockopt(props->socket, SOL_SOCKET, SO_REUSEADDR, (const char*)&set, sizeof(int));
+
+	if (props->szFileName[0])
+	{
+		destFile = CreateFile(props->szFileName, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, 0, NULL);
+		if (destFile == INVALID_HANDLE_VALUE)
+		{
+			MessageBoxPrintf(MB_ICONERROR, TEXT("CreateFile Failed"), TEXT("CreateFile failed with error %d"), GetLastError());
+			return -1;
+		}
+	}
 
 	if (props->nSockType == SOCK_STREAM && !ListenTCP(props))
 	{
@@ -127,7 +137,7 @@ DWORD WINAPI Serve(VOID *hwnd)
 
 	MessageBoxPrintf(MB_ICONERROR, TEXT("Received"), TEXT("Received %d packets."), recvd);
 	DrawTextPrintf((HWND)hwnd, TEXT("Received %d packets."), recvd);
-	
+
 	if (props->szFileName[0] == 0)
 		LogTransferInfo("ReceiveLog.txt", props, recvd, GetWindowLongPtr((HWND)hwnd, GWLP_HOSTMODE));
 
@@ -179,12 +189,10 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	GetSystemTime(&props->endTime);
 
 	if (useFile)
-	{
-		// Write to the file
-	}
+		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
 	
 	// Finished receiving
-	if (recvd == props->nNumToSend)
+	if (!useFile && recvd == props->nNumToSend)
 	{
 		props->dwTimeout = 0;
 		return;
@@ -236,6 +244,9 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		return;
 	}
 
+	if (useFile)
+		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
+
 	if (props->nPacketSize == 0)
 	{
 		props->nNumToSend	= ((DWORD *)wsaBuf.buf)[0]; // extract the original number to send
@@ -273,13 +284,13 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 VOID ServerCleanup(LPTransferProps props)
 {
 	recvd = 0;
-	memset(&props->startTime, 0, sizeof(SYSTEMTIME));
-	memset(&props->endTime, 0, sizeof(SYSTEMTIME));
+	closesocket(props->socket);
+	DWORD error = WSAGetLastError();
 	props->nPacketSize = 0;
 	props->nNumToSend = 0;
-	props->socket = INVALID_SOCKET;
 	props->dwTimeout = COMM_TIMEOUT;
 	closesocket(props->socket);
+	CloseHandle(destFile);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------

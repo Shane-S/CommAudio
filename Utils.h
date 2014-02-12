@@ -25,8 +25,8 @@
 #endif
 
 int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ...);
-int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...);
-VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, DWORD dwHostMode);
+int CDECL DrawTextPrintf(HWND hwnd, CHAR * szFormat, ...);
+VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, HWND hwnd);
 VOID CreateTimestamp(char *buf, SYSTEMTIME *time);
 
 #endif

@@ -75,10 +75,10 @@ int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ..
 -- Wraps sprintf and DrawText functionality for more convenient custom writing to the window. The comments within the
 -- function are also written by Petzold.
 ---------------------------------------------------------------------------------------------------------------------------*/
-int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...)
+int CDECL DrawTextPrintf(HWND hwnd, CHAR * szFormat, ...)
 {
-	HDC hdc = GetDC(hwnd);
-	TCHAR szBuffer[1024];
+	HDC hdc;
+	CHAR szBuffer[1024];
 	va_list pArgList;
 	DWORD dwRet;
 	RECT clientRect;
@@ -87,14 +87,15 @@ int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...)
 	// pArgList = (char *) &szFormat + sizeof (szFormat) ;
 	va_start(pArgList, szFormat);
 	// The last argument to wvsprintf points to the arguments
-	_vsntprintf_s(szBuffer, sizeof (szBuffer) / sizeof (TCHAR),
+	_vsnprintf_s(szBuffer, sizeof (szBuffer) / sizeof (TCHAR),
 		szFormat, pArgList);
 	// The va_end macro just zeroes out pArgList for no good reason
 	va_end(pArgList);
 
-	dwRet = DrawText(hdc, szBuffer, _tcslen(szBuffer), &clientRect, DT_CALCRECT);
-	//InvalidateRect(hwnd, &clientRect, TRUE);
-	//UpdateWindow(hwnd);
+	hdc = GetDC(hwnd);
+	dwRet = DrawTextA(hdc, szBuffer, strlen(szBuffer), &clientRect, DT_CALCRECT);
+	InvalidateRect(hwnd, &clientRect, TRUE);
+	UpdateWindow(hwnd);
 	ReleaseDC(hwnd, hdc);
 
 	return dwRet;
@@ -121,12 +122,16 @@ int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...)
 -- Logs information about the transfer: start timestamp, end timestamp, transfer time, number of packets
 -- sent/received/expected, packet size, and protocol used.
 ---------------------------------------------------------------------------------------------------------------------------*/
-VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, DWORD dwHostMode)
+VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, HWND hwnd)
 {
-	FILE *file;
-	FILETIME ftStartTime, ftEndTime;
-	CHAR startTimestamp[TIMESTAMP_SIZE] = { 0 }, endTimestamp[TIMESTAMP_SIZE] = { 0 };
-	ULARGE_INTEGER ulStartTime, ulEndTime, ulTransferTime;
+	DWORD			dwHostMode = (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE);
+	FILE			*file;
+	FILETIME		ftStartTime, ftEndTime;
+	CHAR			startTimestamp[TIMESTAMP_SIZE] = { 0 }, endTimestamp[TIMESTAMP_SIZE] = { 0 };
+	ULARGE_INTEGER	ulStartTime, ulEndTime, ulTransferTime;
+	CHAR			log[256] = { 0 };
+	INT				written = 0;
+	TCHAR			logw[256];
 
 	// Jump through the ludicrous amount of hoops to get millisecond resolution on Windows
 	SystemTimeToFileTime(&props->startTime, &ftStartTime);
@@ -145,28 +150,30 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 	CreateTimestamp(startTimestamp, &props->startTime);
 	CreateTimestamp(endTimestamp, &props->endTime);
 
-	fopen_s(&file, filename, "a");
+	//errno_t error = fopen_s(&file, filename, "a");
 	if (file == NULL)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("Couldn't Open File"), TEXT("Couldn't open log file %s"), filename);
 		return;
 	}
 
-	if (props->nSockType == SOCK_STREAM)
-		dwSentOrRecvd /= props->nPacketSize; // Number of TCP 'packets' sent/received (Nagle may have given different ones)
-
 	// The division by 10 000 is necessary because Windows gives the times in 100ns intervals. Why would you do that. Seriously.
-	fprintf(file, "Start timestamp: %s\r\nEnd timestamp: %s\r\nTransfer time: %dms\r\n", startTimestamp, endTimestamp,
+	written += sprintf_s(log, "Start timestamp: %s\r\nEnd timestamp: %s\r\nTransfer time: %dms\r\n", startTimestamp, endTimestamp,
 		ulTransferTime.QuadPart / 10000);
-	fprintf(file, "Packet size: %d bytes\r\n", props->nPacketSize);
+	written += sprintf_s((log + written), 256, "Packet size: %d bytes\r\n", props->nPacketSize);
 	
 	if(dwHostMode == ID_HOSTTYPE_SERVER)
-		fprintf(file, "Packets received : %d\r\nPackets expected : %d\r\n", dwSentOrRecvd, props->nNumToSend);
+		written += sprintf_s((log + written), 256, "Bytes received: %d\r\nPackets received : %d\r\nPackets expected : %d\r\n", dwSentOrRecvd,
+		dwSentOrRecvd / props->nPacketSize, props->nNumToSend);
 	else
-		fprintf(file, "Packets sent: %d\r\n", dwSentOrRecvd);
+		written += sprintf_s((log + written), 256, "Packets sent: %d\r\nBytes sent: %d\r\n", dwSentOrRecvd / props->nPacketSize, dwSentOrRecvd);
 
-	fprintf(file, "Protocol: %s\r\n\r\n", (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
-	fclose(file);
+	written += sprintf_s((log + written), 256, "Protocol: %s\r\n\r\n", (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
+	//fprintf(file, "%s", "hello");
+	
+	CHAR_2_TCHAR(logw, log, 256);
+	MessageBoxPrintf(MB_OK, TEXT("Stats"), TEXT("%s"), logw);
+	//fclose(file);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------

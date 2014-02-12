@@ -135,11 +135,8 @@ DWORD WINAPI Serve(VOID *hwnd)
 			break; // We've lost some packets; just exit the loop
 	}
 
-	MessageBoxPrintf(MB_ICONERROR, TEXT("Received"), TEXT("Received %d packets."), recvd);
-	DrawTextPrintf((HWND)hwnd, TEXT("Received %d packets."), recvd);
-
 	if (props->szFileName[0] == 0)
-		LogTransferInfo("ReceiveLog.txt", props, recvd, GetWindowLongPtr((HWND)hwnd, GWLP_HOSTMODE));
+		LogTransferInfo("ReceiveLog.txt", props, recvd, (HWND)hwnd);
 
 	ServerCleanup(props);
 	return 0;
@@ -182,7 +179,7 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		props->dwTimeout = 0;
 		return;
 	}
-	++recvd;
+	recvd += dwNumberOfBytesTransfered;
 
 	props->nNumToSend = ((DWORD *)wsaBuf.buf)[0];
 	props->nPacketSize = dwNumberOfBytesTransfered;
@@ -192,7 +189,7 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
 	
 	// Finished receiving
-	if (!useFile && recvd == props->nNumToSend)
+	if (!useFile && recvd/dwNumberOfBytesTransfered == props->nNumToSend)
 	{
 		props->dwTimeout = 0;
 		return;

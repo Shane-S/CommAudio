@@ -168,7 +168,7 @@ DWORD WINAPI ClientSendData(VOID *params)
 	}
 
 	if (props->szFileName[0] == 0) // We didn't use a file, so log the stats
-		LogTransferInfo(logFile, props, sent, (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE));
+		LogTransferInfo(logFile, props, sent, hwnd);
 	
 	ClientCleanup(props);
 	return 0;
@@ -290,8 +290,8 @@ VOID CALLBACK UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		return;
 	}
 
-	++sent;
-	if (sent >= props->nNumToSend) // Finished sending
+	sent += dwNumberOfBytesTransfered;
+	if (sent / props->nPacketSize >= props->nNumToSend) // Finished sending
 	{
 		GetSystemTime(&props->endTime);
 		props->dwTimeout = 0;

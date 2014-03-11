@@ -129,9 +129,9 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 	FILETIME		ftStartTime, ftEndTime;
 	CHAR			startTimestamp[TIMESTAMP_SIZE] = { 0 }, endTimestamp[TIMESTAMP_SIZE] = { 0 };
 	ULARGE_INTEGER	ulStartTime, ulEndTime, ulTransferTime;
-	CHAR			log[256] = { 0 };
+	CHAR			log[512] = { 0 };
 	INT				written = 0;
-	TCHAR			logw[256];
+	TCHAR			logw[512];
 
 	// Jump through the ludicrous amount of hoops to get millisecond resolution on Windows
 	SystemTimeToFileTime(&props->startTime, &ftStartTime);
@@ -150,7 +150,7 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 	CreateTimestamp(startTimestamp, &props->startTime);
 	CreateTimestamp(endTimestamp, &props->endTime);
 
-	//errno_t error = fopen_s(&file, filename, "a");
+	errno_t error = fopen_s(&file, filename, "a");
 	if (file == NULL)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("Couldn't Open File"), TEXT("Couldn't open log file %s"), filename);
@@ -169,11 +169,11 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 		written += sprintf_s((log + written), 256, "Packets sent: %d\r\nBytes sent: %d\r\n", dwSentOrRecvd / props->nPacketSize, dwSentOrRecvd);
 
 	written += sprintf_s((log + written), 256, "Protocol: %s\r\n\r\n", (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
-	//fprintf(file, "%s", "hello");
+	fprintf(file, "%s", "hello");
 	
 	CHAR_2_TCHAR(logw, log, 256);
 	MessageBoxPrintf(MB_OK, TEXT("Stats"), TEXT("%s"), logw);
-	//fclose(file);
+	fclose(file);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
@@ -186,7 +186,7 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 --
 -- INTERFACE: MessageBoxPrintf(char *buf, SYSTEMTIME *time)
 --								char *buf:			A buffer which will hold the timestamp string.
---								SYSTEMTIME *time:	The SYSTEMTIME structure holding the info timestamp for conversion.
+--								SYSTEMTIME *time:	The SYSTEMTIME structure holding the timestamp for conversion.
 --
 -- RETURNS: void
 --

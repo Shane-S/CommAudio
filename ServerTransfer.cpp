@@ -1,58 +1,35 @@
-/*----------------------------------------------------------------------------------------------------------------------
--- SOURCE FILE: ServerTransfer.cpp
---
--- PROGRAM: Assn2
---
--- FUNCTIONS:
--- BOOL ServerInitSocket(LPTransferProps props);
--- DWORD WINAPI Serve(VOID *hwnd);
--- VOID ServerCleanup(LPTransferProps props);
--- BOOL ListenTCP(LPTransferProps props);
--- BOOL ListenUDP(LPTransferProps props);
--- 
--- VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
---		LPOVERLAPPED lpOverlapped, DWORD dwFlags);
--- VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
---		LPOVERLAPPED lpOverlapped, DWORD dwFlags);
---
--- DATE: February 6th, 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- NOTES:	Functions in this file compose the server side of the program. Serve is the server thread, ServerInitSocket
---			initialises a server socket, and ServerCleanup resets the transfer state variables to their defaults. The two
---			Listen functions handle incoming connections for TCP and UDP. The two callback functions are completion 
---			routines called by Windows when the server receives data.
--------------------------------------------------------------------------------------------------------------------------*/
-
 #include "ServerTransfer.h"
 
-// "Global" variables (used only in this file)
+/** 
+ * Contains definitions of all functions for the server side.
+ * 
+ * This file defines all functions in ServerTransfer.h. It has a fairly long description, as one might
+ * expect; it is, after all, a doxygen test file designed for performing some experiments with the tool.
+ *
+ * Here is a list of reasons why this is a good tool:
+ * <ul>
+ * <li>It supports "grouping", which allows the inclusion of multiple files in a group (good for modules)</li>
+ * <li>It can use a variety of comment styles: namely, Qt, JavaDoc, and Doxygen's propriety style</li>
+ * <li>It automatically links to other files when they're mentioned (see above)</li>
+ * <li>It can use Markdown and LaTeX to do some pretty cool stuff</li>
+ * <li>And on and on it goes</li>
+ * </ul>
+ *
+ * Another nice thing about Doxygen is the ability to link elsewhere: http://www.github.com
+ * @file ServerTransfer.cpp
+ */
+
 static DWORD	recvd	= 0;	// The number of bytes or packets received
 static WSABUF	wsaBuf;			// A buffer to contain the received data
-static HANDLE	destFile;		// A file to store the transferred data (if specified by the user)
+static HANDLE	destFile = 0;	// A file to store the transferred data (if specified by the user)
 
-/*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: ServerInitSocket
--- Febrary 6th, 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: ClientInitSocket(LPTransferProps props)
---							LPTransferProps props:	Pointer to a TransferProps structure containing information about the
---													packet size and number, server IP/host name, etc.
---
--- RETURNS: False if the socket can't be created or bound; true otherwise.
---
--- NOTES:
--- Preps a socket for receiving. This will socket will listen for packets (TCP) or receive the initial packet (UDP) when
--- the server is listening. The socket is created and bound here. The function also prevents the user from creating another
--- listening thread (it will return an error message if the address is already bound).
----------------------------------------------------------------------------------------------------------------------------*/
+/**
+ * Initialises a TCP or UDP socket for use by the server.
+ *
+ * @author Shane Spoor
+ * @param[in] props Pointer to the TransferProps struct containing socket info.
+ * @return True if the socket was successfully initiliased, false otherwise.
+ */
 BOOL ServerInitSocket(LPTransferProps props)
 {
 	SOCKET s = WSASocket(AF_INET, props->nSockType, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
@@ -77,37 +54,27 @@ BOOL ServerInitSocket(LPTransferProps props)
 	return TRUE;
 }
 
-/*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: Serve
--- Febrary 6th, 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: Serve(VOID *hwnd)
---					VOID *hwnd: Handle to the parent window.
---
--- RETURNS: A status code inidicating the thread's state when it exited. This is a positive integer if an error occurred,
---			or zero if the thread ran successfully.
---
--- NOTES:
--- Listens for incoming connection requests/packets. Once a connection has been established or a packet received, the
--- thread continues to receive the packets until there are no more to receive (UDP) or the client sends FIN, ACK (TCP).
----------------------------------------------------------------------------------------------------------------------------*/
+/**
+ * Listens for data/connection attempts, then receives the client's data.
+ *
+ * @author Shane Spoor
+ * @designer Shane Spoor
+ * @param[in] hwnd Handle to the window (cast as a VOID * for the thread prototype).
+ * @return The thread's status on exit.
+ */
 DWORD WINAPI Serve(VOID *hwnd)
 {
 	BOOL			set		= TRUE;
 	DWORD			flags	= 0;
 	LPTransferProps props	= (LPTransferProps)GetWindowLongPtr((HWND)hwnd, GWLP_TRANSFERPROPS);
+	LPSOCKADDR_IN   client  = (LPSOCKADDR_IN)malloc(sizeof(SOCKADDR_IN));
 	DWORD			dwSleepRet;
-	SOCKADDR_IN		client;
 	char			buf[UDP_MAXPACKET];
 
 	wsaBuf.buf = buf;
 	wsaBuf.len = UDP_MAXPACKET;
 
-	if (props->szFileName[0])
+	if (props->szFileName[0]) // They specified a file in which to save the data
 	{
 		destFile = CreateFile(props->szFileName, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, 0, NULL);
 		if (destFile == INVALID_HANDLE_VALUE)
@@ -122,7 +89,7 @@ DWORD WINAPI Serve(VOID *hwnd)
 		ServerCleanup(props);
 		return 1;
 	}
-	else if (props->nSockType == SOCK_DGRAM && !ListenUDP(props, &client))
+	else if (props->nSockType == SOCK_DGRAM && !ListenUDP(props))
 	{
 		ServerCleanup(props);
 		return 2;
@@ -135,43 +102,27 @@ DWORD WINAPI Serve(VOID *hwnd)
 			break; // We've lost some packets; just exit the loop
 	}
 
-	if (props->szFileName[0] == 0)
+	closesocket(props->socket);
+	if (props->szFileName[0] == 0) // Log only if we're not transferring a file
 		LogTransferInfo("ReceiveLog.txt", props, recvd, (HWND)hwnd);
 
 	ServerCleanup(props);
 	return 0;
 }
 
-/*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: UDPRecvCompletion
--- Febrary 7th, 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
---								DWORD dwErrorCode:					0 if there were no errors; otherwise, a socket error code.
---								DWORD dwNumberOfBytesTransferred:	The number of bytes transferred.
---								LPOVERLAPPED lpOverlapped :			Pointer to an overlapped structure; here, it is a pointer to
---																	an LPTransferProps structure.
---								DWORD dwFlags:						Flags specified when the WSASend was posted.
---
--- RETURNS: void
---
--- NOTES:
--- Windows calls this function whenever a UDP packet is received. It increments the number of packets received and posts another
--- WSARecvFrom. If there are no packets left to receive, it obtains the end time and returns. If there is an error, it displays
--- the appropriate error message and returns.
----------------------------------------------------------------------------------------------------------------------------*/
+/**
+ * Increments the number of packets received when a WSARecvFrom completes on a UDP socket.
+ *
+ * @param dwErrorCode					The error code (if any) set while the WSARecvFrom happened.
+ * @param dwNumberOfBytesTransferred	The number of bytes received.
+ * @param lpOverlapped					Pointer to an overlapped I/O (not used since this is a completion routine).
+ * @param dwFlags						The flags set on the socket.
+ */
 VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
 	LPTransferProps props = (LPTransferProps)lpOverlapped;
-	static BOOL		useFile = props->szFileName[0] != 0;
 	DWORD flags = 0;
-	SOCKADDR_IN client;
-	INT client_size = sizeof(client);
 
 	if (dwErrorCode != 0)
 	{
@@ -185,11 +136,11 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	props->nPacketSize = dwNumberOfBytesTransfered;
 	GetSystemTime(&props->endTime);
 
-	if (useFile)
+	if (props->szFileName[0])
 		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
 	
 	// Finished receiving
-	if (!useFile && recvd/dwNumberOfBytesTransfered == props->nNumToSend)
+	if (!props->szFileName[0] && (recvd / dwNumberOfBytesTransfered == props->nNumToSend))
 	{
 		props->dwTimeout = 0;
 		return;
@@ -202,36 +153,21 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		GetSystemTime(&props->startTime);
 	}
 
-	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, (sockaddr *)&client, &client_size, (LPOVERLAPPED)props, UDPRecvCompletion);
+	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props, UDPRecvCompletion);
 }
 
-/*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: TCPRecvCompletion
--- Febrary 7th 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
---								DWORD dwErrorCode:					0 if there were no errors; otherwise, a socket error code.
---								DWORD dwNumberOfBytesTransferred:	The number of bytes transferred.
---								LPOVERLAPPED lpOverlapped :			Pointer to an overlapped structure; here, it is a pointer to
---																	an LPTransferProps structure.
---								DWORD dwFlags:						Flags specified when the WSASend was posted.
---
--- RETURNS: void
---
--- NOTES:
--- Windows calls this function whenever a TCP packet is received. It increments the number of bytes received and posts another
--- WSARecv. If there are no packets left to receive, it obtains the end time and returns. If there is an error, it displays the
--- appropriate error message and returns.
----------------------------------------------------------------------------------------------------------------------------*/
+/**
+* Increments the number of bytes received when a WSARecv completes on a TCP socket.
+*
+* @param dwErrorCode					The error code (if any) set while the WSARecvFrom happened.
+* @param dwNumberOfBytesTransferred:	The number of bytes received.
+* @param lpOverlapped					Pointer to an overlapped I/O (not used since this is a completion routine).
+* @param dwFlags						The flags set on the socket.
+ */
 VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
 	LPTransferProps props	= (LPTransferProps)lpOverlapped;
-	static BOOL		useFile = props->szFileName[0] != 0;
 	DWORD			flags	= 0;
 
 	if (dwErrorCode != 0)
@@ -241,7 +177,7 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		return;
 	}
 
-	if (useFile)
+	if (props->szFileName[0] != 0)
 		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
 
 	if (props->nPacketSize == 0)
@@ -261,52 +197,28 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
 }
 
-/*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: ServerCleanup
--- Febrary 10th 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: ServerCleanup(LPTransferProps props)
---							LPTransferProps props:  Pointer to the TransferProps structure containing the details for this
---													transfer.
---
--- RETURNS: void
---
--- NOTES:
--- Resets all parameters used in the transfer to their default values in preparation for receiving again.
----------------------------------------------------------------------------------------------------------------------------*/
+/**
+ * Resets server properties in preparation for the next transfer.
+ *
+ * @param props Pointer to a TransferProps structure to free.
+ */
 VOID ServerCleanup(LPTransferProps props)
 {
 	recvd = 0;
-	closesocket(props->socket);
-	DWORD error = WSAGetLastError();
 	props->nPacketSize = 0;
 	props->nNumToSend = 0;
 	props->dwTimeout = COMM_TIMEOUT;
-	closesocket(props->socket);
-	CloseHandle(destFile);
+	if (destFile)
+		CloseHandle(destFile);
+	destFile = 0;
 }
 
-/*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: ListenTCP
--- Febrary 10th 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: ListenTCP(LPTransferProps props)
---						LPTransferProps props:  Pointer to the TransferProps structure containing the details for this
---													transfer.
---
--- RETURNS: void
---
--- NOTES:
--- Listens for and accepts a TCP connection, then posts a WSARecv on the socket to activate the completion routine.
----------------------------------------------------------------------------------------------------------------------------*/
+/**
+ * Listens for a TCP connection on a listening socket and accepts connections.
+ *
+ * @param props Pointer to the TransferProps structure containing information about this transfer.
+ * @return False if something went wrong during the connection, true otherwise.
+ */
 BOOL ListenTCP(LPTransferProps props)
 {
 	SOCKET accept;
@@ -341,34 +253,18 @@ BOOL ListenTCP(LPTransferProps props)
 	return TRUE;
 }
 
-/*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: ListenUDP
--- Febrary 10th 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: ListenUDP(LPTransferProps props, LPSOCKADDR_IN client)
---							LPTransferProps props:  Pointer to the TransferProps structure containing the details for this
---													transfer.
---							LPSOCKADDR_IN	client:	Pointer to a SOCKADDR_IN structure to hold the client's info. This must
---													be passed from the thread to ensure that it's in scope when the
---													completion routine is called.
---
--- RETURNS: void
---
--- NOTES:
--- Posts a receive request on the socket to wait for a UDP packet.
----------------------------------------------------------------------------------------------------------------------------*/
-BOOL ListenUDP(LPTransferProps props, LPSOCKADDR_IN client)
+/**
+ * Increments the number of packets received when a WSARecvFrom completes on a UDP socket.
+ *
+ * @param props Pointer to the TransferProps structure containing details about this transfer.
+ * @return True if the WSARecvFrom succeeded, or false if something went wrong.
+ */
+BOOL ListenUDP(LPTransferProps props)
 {
 	DWORD		flags = 0, error = 0;
-	INT			client_size = sizeof(*client);
-
 	props->dwTimeout = INFINITE;
 
-	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, (sockaddr *)client, &client_size, (LPOVERLAPPED)props,
+	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props,
 		UDPRecvCompletion);
 
 	error = WSAGetLastError();

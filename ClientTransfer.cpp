@@ -167,6 +167,7 @@ DWORD WINAPI ClientSendData(VOID *params)
 		}
 	}
 
+	closesocket(props->socket);
 	if (props->szFileName[0] == 0) // We didn't use a file, so log the stats
 		LogTransferInfo(logFile, props, sent, hwnd);
 	
@@ -406,11 +407,10 @@ BOOL LoadFile(LPWSABUF wsaBuf, const TCHAR *szFileName, LPDWORD lpdwFileSize, LP
 -- INTERFACE: CreateBuffer(CHAR data, LPTransferProps props)
 --							CHAR data: Handle to the main window cast as a VOID *.
 --
--- RETURNS: A positive int if the connection fails (TCP), the user-specified file couldn't be opened, or the buffer couldn't be
---			allocated. Returns 0 on successful sending.
+-- RETURNS: 0 if a buffer coulnd't be created or a pointer to the buffer.
 --
 -- NOTES:
--- Sends either a chosen file (if there is one) or a specified number of packets of the specified size.
+-- Creates a buffer holding nPacketSize number of characters with each character having a value of data.
 ---------------------------------------------------------------------------------------------------------------------------*/
 CHAR *CreateBuffer(CHAR data, LPTransferProps props)
 {
@@ -478,13 +478,12 @@ BOOL PopulateBuffer(LPWSABUF pwsaBuf, LPTransferProps props, LPDWORD lpdwFileSiz
 -- RETURNS: void
 --
 -- NOTES:
--- Sends either a chosen file (if there is one) or a specified number of packets of the specified size.
+-- Frees the buffer and resets variables back to zero in preparation for the next sending run.
 ---------------------------------------------------------------------------------------------------------------------------*/
 VOID ClientCleanup(LPTransferProps props)
 {
 	DWORD error;
 	free(wsaBuf.buf);
-	closesocket(props->socket);
 	error = WSAGetLastError();
 	memset(&props->startTime, 0, sizeof(SYSTEMTIME));
 	memset(&props->endTime, 0, sizeof(SYSTEMTIME));

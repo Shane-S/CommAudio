@@ -9,8 +9,8 @@
 #include <WinSock2.h>
 #include <Windows.h>
 #include <time.h>
-#include "WinStorage.h"
-#include "Utils.h"
+#include "../WinStorage.h"
+#include "../Utils.h"
 
 #define UDP_MAXPACKET	65000	/**< The maximum UDP datagram size */
 #ifndef COMM_TIMEOUT		

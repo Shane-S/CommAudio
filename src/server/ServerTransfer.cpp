@@ -34,8 +34,6 @@ BOOL ServerInitSocket(LPTransferProps props)
 {
 	SOCKET s = WSASocket(AF_INET, props->nSockType, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	BOOL set = TRUE;
-	props->nPacketSize = 0;
-	props->nNumToSend = 0;
 
 	props->paddr_in->sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -132,26 +130,9 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	}
 	recvd += dwNumberOfBytesTransfered;
 
-	props->nNumToSend = ((DWORD *)wsaBuf.buf)[0];
-	props->nPacketSize = dwNumberOfBytesTransfered;
-	GetSystemTime(&props->endTime);
-
 	if (props->szFileName[0])
 		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
 	
-	// Finished receiving
-	if (!props->szFileName[0] && (recvd / dwNumberOfBytesTransfered == props->nNumToSend))
-	{
-		props->dwTimeout = 0;
-		return;
-	}
-
-	// This is the first packet
-	if (props->dwTimeout == INFINITE)
-	{
-		props->dwTimeout = COMM_TIMEOUT;
-		GetSystemTime(&props->startTime);
-	}
 
 	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props, UDPRecvCompletion);
 }
@@ -180,19 +161,6 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	if (props->szFileName[0] != 0)
 		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
 
-	if (props->nPacketSize == 0)
-	{
-		props->nNumToSend	= ((DWORD *)wsaBuf.buf)[0]; // extract the original number to send
-		props->nPacketSize	= ((DWORD *)wsaBuf.buf)[1]; // extract the original packet size
-	}
-
-	if (dwNumberOfBytesTransfered == 0)
-	{
-		GetSystemTime(&props->endTime);
-		props->dwTimeout = 0;
-		return;
-	}
-
 	recvd += dwNumberOfBytesTransfered;
 	WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
 }
@@ -205,9 +173,6 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 VOID ServerCleanup(LPTransferProps props)
 {
 	recvd = 0;
-	props->nPacketSize = 0;
-	props->nNumToSend = 0;
-	props->dwTimeout = COMM_TIMEOUT;
 	if (destFile)
 		CloseHandle(destFile);
 	destFile = 0;
@@ -235,7 +200,6 @@ BOOL ListenTCP(LPTransferProps props)
 		MessageBoxPrintf(MB_ICONERROR, TEXT("WSAAccept Failed"), TEXT("WSAAccept() failed with socket error %d"), WSAGetLastError());
 		return FALSE;
 	}
-	GetSystemTime(&props->startTime); // Record the start time
 
 	closesocket(props->socket); // close the listening socket
 	props->socket = accept;		// assign the new socket to props->socket

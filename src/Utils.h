@@ -5,7 +5,7 @@
 #include <Windows.h>
 #include <tchar.h>
 #include <cstdio>
-#include "resource.h"
+#include "gui/resource.h"
 
 #define TIMESTAMP_SIZE 27
 

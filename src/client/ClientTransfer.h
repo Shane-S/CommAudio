@@ -7,8 +7,8 @@
 #include <cstdio>
 #include <cstring>
 #include <time.h>
-#include "WinStorage.h"
-#include "Utils.h"
+#include "../WinStorage.h"
+#include "../Utils.h"
 
 #define FILE_PACKETSIZE 4096
 

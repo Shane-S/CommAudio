@@ -29,8 +29,6 @@ BOOL ListenUDP(LPTransferProps props);
 // Completion routine prototypes
 VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags);
-VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
-	LPOVERLAPPED lpOverlapped, DWORD dwFlags);
 
 // Prepare server for next volley of packets
 VOID ServerCleanup(LPTransferProps props);

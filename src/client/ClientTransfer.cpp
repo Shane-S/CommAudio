@@ -56,7 +56,7 @@ static WSABUF	wsaBuf;		// A buffer containing the data to be sent
 ---------------------------------------------------------------------------------------------------------------------------*/
 BOOL ClientInitSocket(LPTransferProps props)
 {
-	if (props->szHostName[0] != 0) // They specified a host name
+	/*if (props->szHostName[0] != 0) // They specified a host name
 	{
 		struct hostent *hp;
 		char		   name[HOSTNAME_SIZE];
@@ -89,7 +89,7 @@ BOOL ClientInitSocket(LPTransferProps props)
 			}
 		}
 		props->paddr_in->sin_addr.s_addr = (ULONG)hp->h_addr_list[0];
-	}
+	}*/
 	
 	if (props->paddr_in->sin_addr.s_addr != 0)
 	{
@@ -168,8 +168,8 @@ DWORD WINAPI ClientSendData(VOID *params)
 	}
 
 	closesocket(props->socket);
-	if (props->szFileName[0] == 0) // We didn't use a file, so log the stats
-		LogTransferInfo(logFile, props, sent, hwnd);
+	/*if (props->szFileName[0] == 0) // We didn't use a file, so log the stats
+		LogTransferInfo(logFile, props, sent, hwnd);*/
 	
 	ClientCleanup(props);
 	return 0;
@@ -198,7 +198,6 @@ BOOL TCPSendFirst(LPTransferProps props)
 	DWORD firstSent;
 
 	WSAConnect(props->socket, (sockaddr *)props->paddr_in, sizeof(sockaddr), NULL, NULL, NULL, NULL);
-	GetSystemTime(&props->startTime);
 	error = WSAGetLastError();
 
 	if (error)
@@ -242,8 +241,8 @@ BOOL UDPSendFirst(LPTransferProps props)
 	DWORD firstSent;
 	DWORD error;
 
-	setsockopt(props->socket, SOL_SOCKET, SO_SNDBUF, wsaBuf.buf, props->nPacketSize);
-	GetSystemTime(&props->startTime);
+	//setsockopt(props->socket, SOL_SOCKET, SO_SNDBUF, wsaBuf.buf, props->nPacketSize);
+	//GetSystemTime(&props->startTime);
 	WSASendTo(props->socket, &wsaBuf, 1, &firstSent, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr), (LPOVERLAPPED)props, UDPSendCompletion);
 	error = WSAGetLastError();
 
@@ -253,7 +252,6 @@ BOOL UDPSendFirst(LPTransferProps props)
 			TEXT("WSASendTo failed with error %d"), error);
 		return FALSE;
 	}
-	GetSystemTime(&props->startTime);
 	return TRUE;
 }
 
@@ -292,13 +290,6 @@ VOID CALLBACK UDPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	}
 
 	sent += dwNumberOfBytesTransfered;
-	if (sent / props->nPacketSize >= props->nNumToSend) // Finished sending
-	{
-		GetSystemTime(&props->endTime);
-		props->dwTimeout = 0;
-		return;
-	}
-
 	WSASendTo(props->socket, &wsaBuf, 1, NULL, 0, (sockaddr *)props->paddr_in, sizeof(sockaddr), (LPOVERLAPPED)props, UDPSendCompletion);
 }
 
@@ -337,13 +328,6 @@ VOID CALLBACK TCPSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 	}
 	sent += dwNumberOfBytesTransfered;
 
-	if (sent / props->nPacketSize >= props->nNumToSend) // We're finished sending
-	{
-		props->dwTimeout = 0;
-		GetSystemTime(&props->endTime);
-		return;
-	}
-
 	WSASend(props->socket, &wsaBuf, 1, NULL, 0, (LPOVERLAPPED)props, TCPSendCompletion); // Post another send
 }
 
@@ -373,15 +357,8 @@ BOOL LoadFile(LPWSABUF wsaBuf, const TCHAR *szFileName, LPDWORD lpdwFileSize, LP
 	DWORD dwFileSize;
 	HANDLE hFile;
 	DWORD dwRead;
-	hFile = CreateFile(props->szFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	//hFile = CreateFile(props->szFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
-	if (hFile == INVALID_HANDLE_VALUE)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("Couldn't Open File"),
-			TEXT("Could not open file %s. Please check the spelling or select a different file. System Error: %d"), 
-			props->szFileName, GetLastError());
-		return FALSE;
-	}
 
 	dwFileSize = GetFileSize(hFile, NULL);
 	wsaBuf->buf = (CHAR *)malloc(dwFileSize);
@@ -389,8 +366,8 @@ BOOL LoadFile(LPWSABUF wsaBuf, const TCHAR *szFileName, LPDWORD lpdwFileSize, LP
 	wsaBuf->len = dwFileSize;
 	*lpdwFileSize = dwFileSize;
 
-	props->nNumToSend = dwFileSize / FILE_PACKETSIZE;
-	props->nPacketSize = FILE_PACKETSIZE;
+	//props->nNumToSend = dwFileSize / FILE_PACKETSIZE;
+	//props->nPacketSize = FILE_PACKETSIZE;
 	CloseHandle(hFile);
 
 	return TRUE;
@@ -414,8 +391,8 @@ BOOL LoadFile(LPWSABUF wsaBuf, const TCHAR *szFileName, LPDWORD lpdwFileSize, LP
 ---------------------------------------------------------------------------------------------------------------------------*/
 CHAR *CreateBuffer(CHAR data, LPTransferProps props)
 {
-	CHAR *buf = (CHAR *)malloc(props->nPacketSize);
-	if (buf == NULL)
+	//CHAR *buf = (CHAR *)malloc(props->nPacketSize);
+	/*if (buf == NULL)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("No Memory Allocated"), TEXT("Windows couldn't allocate memory, error %d"), WSAGetLastError());
 		return NULL;
@@ -425,7 +402,8 @@ CHAR *CreateBuffer(CHAR data, LPTransferProps props)
 	// Write the packet size and number to send directly into the packet
 	((DWORD *)buf)[0] = props->nNumToSend;
 	((DWORD *)buf)[1] = props->nPacketSize;
-	return buf;
+	return buf;*/
+	return NULL;
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
@@ -448,7 +426,7 @@ CHAR *CreateBuffer(CHAR data, LPTransferProps props)
 ---------------------------------------------------------------------------------------------------------------------------*/
 BOOL PopulateBuffer(LPWSABUF pwsaBuf, LPTransferProps props, LPDWORD lpdwFileSize)
 {
-	if (props->szFileName[0] != 0)
+	/*if (props->szFileName[0] != 0)
 	{
 		props->nPacketSize = FILE_PACKETSIZE;
 		if (!LoadFile(pwsaBuf, props->szFileName, lpdwFileSize, props))
@@ -460,7 +438,7 @@ BOOL PopulateBuffer(LPWSABUF pwsaBuf, LPTransferProps props, LPDWORD lpdwFileSiz
 			return FALSE;
 
 		pwsaBuf->len = props->nPacketSize;
-	}
+	}*/
 	return TRUE;
 }
 
@@ -485,8 +463,6 @@ VOID ClientCleanup(LPTransferProps props)
 	DWORD error;
 	free(wsaBuf.buf);
 	error = WSAGetLastError();
-	memset(&props->startTime, 0, sizeof(SYSTEMTIME));
-	memset(&props->endTime, 0, sizeof(SYSTEMTIME));
 	props->dwTimeout = COMM_TIMEOUT;
 	sent = 0;
 }

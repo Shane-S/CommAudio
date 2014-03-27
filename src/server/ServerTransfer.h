@@ -6,16 +6,11 @@
 #ifndef SERVER_TRANSFER_H
 #define SERVER_TRANSFER_H
 
-#include <WinSock2.h>
-#include <Windows.h>
 #include <time.h>
-#include "../WinStorage.h"
+#include "../TransferProps.h"
 #include "../Utils.h"
 
 #define UDP_MAXPACKET	65000	/**< The maximum UDP datagram size */
-#ifndef COMM_TIMEOUT		
-	#define COMM_TIMEOUT 5000 /**< Time to wait before giving up on receiving more data */
-#endif
 
 // Initialise the server and prepare to serve the client
 BOOL ServerInitSocket(LPTransferProps props);
@@ -28,6 +23,9 @@ BOOL ListenUDP(LPTransferProps props);
 
 // Completion routine prototypes
 VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
+	LPOVERLAPPED lpOverlapped, DWORD dwFlags);
+
+VOID CALLBACK ServerUniSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags);
 
 // Prepare server for next volley of packets

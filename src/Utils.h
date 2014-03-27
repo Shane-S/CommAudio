@@ -6,6 +6,7 @@
 #include <tchar.h>
 #include <cstdio>
 #include "gui/resource.h"
+#include "TransferProps.h"
 
 #define TIMESTAMP_SIZE 27
 
@@ -25,8 +26,8 @@
 #endif
 
 int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ...);
-int CDECL DrawTextPrintf(HWND hwnd, CHAR * szFormat, ...);
 VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, HWND hwnd);
 VOID CreateTimestamp(char *buf, SYSTEMTIME *time);
+VOID LogError(const TCHAR *functionName, const int err);
 
 #endif

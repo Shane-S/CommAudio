@@ -1,26 +1,26 @@
-/*----------------------------------------------------------------------------------------------------------------------
--- SOURCE FILE: Utils.cpp
---
--- PROGRAM: Assn2
---
--- FUNCTIONS:
--- int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ...);
--- int CDECL DrawTextPrintf(HWND hwnd, TCHAR * szFormat, ...);
--- VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, DWORD dwHostMode);
--- VOID CreateTimestamp(char *buf, SYSTEMTIME *time);
---
--- DATE: February 7th, 2014
---
--- DESIGNER: Shane Spoor
---
--- PROGRAMMER: Shane Spoor
---
--- NOTES:	This file contains utility functions for use (mostly) throughout the entire program. The printf functions
---			are wrappers for printing to a message box and to the screen, and the LogTransferInfo and CreateTimestamp
---			functions are used in logging transfer statistics.
+
+/**
+ * This file contains utility functions for use (mostly) throughout the entire program.
+ *
+ * @file Utils.cpp
+ *
+ * @todo Change LogError to actually log the error as well.
+ * @todo Add format string printing to LogError
 -------------------------------------------------------------------------------------------------------------------------*/
 
 #include "Utils.h"
+
+/**
+ * Prints the function name and error to the error log.
+ *
+ * @param functionName The name of the function where the error occurred.
+ * @param err		   The error number corresponding to the error.
+ */
+VOID LogError(const TCHAR *functionName, const int err)
+{
+	MessageBoxPrintf(MB_ICONERROR, TEXT("Error"), TEXT("Error in %s: %d"), functionName, err);
+	return;
+}
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: MessageBoxPrintf
@@ -58,50 +58,6 @@ int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ..
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
--- FUNCTION: DrawTextPrintf
--- Febrary 7th, 2014
---
--- DESIGNER: Charles Petzold
---
--- PROGRAMMER: Shane Spoor
---
--- INTERFACE: DrawTextPrintf(HWND hwnd, TCHAR *szFormat, ...)
---								HWND hwnd:			Handle to the window to which we're drawing.
---								TCHAR *szFormat:	The format argument for sprintf.
---
--- RETURNS: An int; this is DrawText's return value.
---
--- NOTES:
--- Wraps sprintf and DrawText functionality for more convenient custom writing to the window. The comments within the
--- function are also written by Petzold.
----------------------------------------------------------------------------------------------------------------------------*/
-int CDECL DrawTextPrintf(HWND hwnd, CHAR * szFormat, ...)
-{
-	HDC hdc;
-	CHAR szBuffer[1024];
-	va_list pArgList;
-	DWORD dwRet;
-	RECT clientRect;
-	GetClientRect(hwnd, &clientRect);
-	// The va_start macro (defined in STDARG.H) is usually equivalent to:
-	// pArgList = (char *) &szFormat + sizeof (szFormat) ;
-	va_start(pArgList, szFormat);
-	// The last argument to wvsprintf points to the arguments
-	_vsnprintf_s(szBuffer, sizeof (szBuffer) / sizeof (TCHAR),
-		szFormat, pArgList);
-	// The va_end macro just zeroes out pArgList for no good reason
-	va_end(pArgList);
-
-	hdc = GetDC(hwnd);
-	dwRet = DrawTextA(hdc, szBuffer, strlen(szBuffer), &clientRect, DT_CALCRECT);
-	InvalidateRect(hwnd, &clientRect, TRUE);
-	UpdateWindow(hwnd);
-	ReleaseDC(hwnd, hdc);
-
-	return dwRet;
-}
-
-/*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: LogTransferInfo
 -- Febrary 9th, 2014
 --
@@ -126,54 +82,9 @@ VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOr
 {
 	DWORD			dwHostMode = (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE);
 	FILE			*file;
-	FILETIME		ftStartTime, ftEndTime;
-	CHAR			startTimestamp[TIMESTAMP_SIZE] = { 0 }, endTimestamp[TIMESTAMP_SIZE] = { 0 };
-	ULARGE_INTEGER	ulStartTime, ulEndTime, ulTransferTime;
 	CHAR			log[512] = { 0 };
 	INT				written = 0;
 	TCHAR			logw[512];
-
-	// Jump through the ludicrous amount of hoops to get millisecond resolution on Windows
-	SystemTimeToFileTime(&props->startTime, &ftStartTime);
-	SystemTimeToFileTime(&props->endTime, &ftEndTime);
-
-	ulStartTime.QuadPart = ftStartTime.dwHighDateTime;
-	ulStartTime.QuadPart <<= 32;
-	ulStartTime.QuadPart += ftStartTime.dwLowDateTime;
-
-	ulEndTime.QuadPart = ftEndTime.dwHighDateTime;
-	ulEndTime.QuadPart <<= 32;
-	ulEndTime.QuadPart += ftEndTime.dwLowDateTime;
-
-	ulTransferTime.QuadPart = ulEndTime.QuadPart - ulStartTime.QuadPart;
-
-	CreateTimestamp(startTimestamp, &props->startTime);
-	CreateTimestamp(endTimestamp, &props->endTime);
-
-	errno_t error = fopen_s(&file, filename, "a");
-	if (file == NULL)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("Couldn't Open File"), TEXT("Couldn't open log file %s"), filename);
-		return;
-	}
-
-	// The division by 10 000 is necessary because Windows gives the times in 100ns intervals. Why would you do that. Seriously.
-	written += sprintf_s(log, "Start timestamp: %s\r\nEnd timestamp: %s\r\nTransfer time: %dms\r\n", startTimestamp, endTimestamp,
-		ulTransferTime.QuadPart / 10000);
-	written += sprintf_s((log + written), 256, "Packet size: %d bytes\r\n", props->nPacketSize);
-	
-	if(dwHostMode == ID_HOSTTYPE_SERVER)
-		written += sprintf_s((log + written), 256, "Bytes received: %d\r\nPackets received : %d\r\nPackets expected : %d\r\n", dwSentOrRecvd,
-		dwSentOrRecvd / props->nPacketSize, props->nNumToSend);
-	else
-		written += sprintf_s((log + written), 256, "Packets sent: %d\r\nBytes sent: %d\r\n", dwSentOrRecvd / props->nPacketSize, dwSentOrRecvd);
-
-	written += sprintf_s((log + written), 256, "Protocol: %s\r\n\r\n", (props->nSockType == SOCK_DGRAM) ? "UDP" : "TCP");
-	fprintf(file, "%s", "hello");
-	
-	CHAR_2_TCHAR(logw, log, 256);
-	MessageBoxPrintf(MB_OK, TEXT("Stats"), TEXT("%s"), logw);
-	fclose(file);
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------

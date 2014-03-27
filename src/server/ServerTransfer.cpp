@@ -20,9 +20,7 @@
  */
 
 static DWORD	recvd	= 0;	// The number of bytes or packets received
-static WSABUF	wsaBuf;			// A buffer to contain the received data
 static HANDLE	destFile = 0;	// A file to store the transferred data (if specified by the user)
-
 /**
  * Initialises a TCP or UDP socket for use by the server.
  *
@@ -67,20 +65,6 @@ DWORD WINAPI Serve(VOID *hwnd)
 	LPTransferProps props	= (LPTransferProps)GetWindowLongPtr((HWND)hwnd, GWLP_TRANSFERPROPS);
 	LPSOCKADDR_IN   client  = (LPSOCKADDR_IN)malloc(sizeof(SOCKADDR_IN));
 	DWORD			dwSleepRet;
-	char			buf[UDP_MAXPACKET];
-
-	wsaBuf.buf = buf;
-	wsaBuf.len = UDP_MAXPACKET;
-
-	if (props->szFileName[0]) // They specified a file in which to save the data
-	{
-		destFile = CreateFile(props->szFileName, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, 0, NULL);
-		if (destFile == INVALID_HANDLE_VALUE)
-		{
-			MessageBoxPrintf(MB_ICONERROR, TEXT("CreateFile Failed"), TEXT("CreateFile failed with error %d"), GetLastError());
-			return -1;
-		}
-	}
 
 	if (props->nSockType == SOCK_STREAM && !ListenTCP(props))
 	{
@@ -95,14 +79,12 @@ DWORD WINAPI Serve(VOID *hwnd)
 
 	while (props->dwTimeout)
 	{
-		dwSleepRet = SleepEx(props->dwTimeout, TRUE);
+		dwSleepRet = SleepEx(INFINITE, TRUE);
 		if (dwSleepRet != WAIT_IO_COMPLETION)
 			break; // We've lost some packets; just exit the loop
 	}
 
 	closesocket(props->socket);
-	if (props->szFileName[0] == 0) // Log only if we're not transferring a file
-		LogTransferInfo("ReceiveLog.txt", props, recvd, (HWND)hwnd);
 
 	ServerCleanup(props);
 	return 0;
@@ -128,13 +110,9 @@ VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		props->dwTimeout = 0;
 		return;
 	}
-	recvd += dwNumberOfBytesTransfered;
+	recvd += dwNumberOfBytesTransfered;	
 
-	if (props->szFileName[0])
-		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
-	
-
-	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props, UDPRecvCompletion);
+	WSARecvFrom(props->socket, &props->dataBuffer, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props, UDPRecvCompletion);
 }
 
 /**
@@ -158,11 +136,8 @@ VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
 		return;
 	}
 
-	if (props->szFileName[0] != 0)
-		WriteFile(destFile, (VOID *)wsaBuf.buf, dwNumberOfBytesTransfered, &dwNumberOfBytesTransfered, NULL);
-
 	recvd += dwNumberOfBytesTransfered;
-	WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
+	WSARecv(props->socket, &props->dataBuffer, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
 }
 
 /**
@@ -188,6 +163,8 @@ BOOL ListenTCP(LPTransferProps props)
 {
 	SOCKET accept;
 	DWORD flags = 0, error = 0;
+	DWORD bytesRead;
+	char *buf = (char *)malloc(BUFSIZE);
 
 	if (listen(props->socket, 5) == SOCKET_ERROR)
 	{
@@ -204,9 +181,10 @@ BOOL ListenTCP(LPTransferProps props)
 	closesocket(props->socket); // close the listening socket
 	props->socket = accept;		// assign the new socket to props->socket
 
-	WSARecv(props->socket, &wsaBuf, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
-
-	error = WSAGetLastError();
+	props->audioFile = CreateFile("C:\\Users\\Shane\\Music\\Zune\\Fleetwood Mac\\Rumours\\07 The Chain.mp3", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	ReadFile(props->audioFile, props->dataBuffer.buf, BUFSIZE, &bytesRead, NULL);
+	props->dataBuffer.len = bytesRead;
+	WSASend(props->socket, &props->dataBuffer, 1, NULL, 0, (LPOVERLAPPED)props, ServerUniSendCompletion);
 
 	if (error && error != WSA_IO_PENDING)
 	{
@@ -228,7 +206,7 @@ BOOL ListenUDP(LPTransferProps props)
 	DWORD		flags = 0, error = 0;
 	props->dwTimeout = INFINITE;
 
-	WSARecvFrom(props->socket, &wsaBuf, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props,
+	WSARecvFrom(props->socket, &props->dataBuffer, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props,
 		UDPRecvCompletion);
 
 	error = WSAGetLastError();

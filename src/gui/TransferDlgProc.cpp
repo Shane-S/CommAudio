@@ -110,7 +110,7 @@ VOID SetDlgDefaults(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 	SendMessage((props->nSockType == SOCK_STREAM) ? hwndTCP : hwndUDP, BM_SETCHECK, (WPARAM)BST_CHECKED, 0);
 
 	// Set the file textbox text; doesn't matter if it's blank
-	SetWindowText(hwndFile, props->szFileName);
+	//SetWindowText(hwndFile, props->szFileName);
 
 	// We've now done everything for the server, so disable all other controls and return
 	if (dwHostMode == ID_HOSTTYPE_SERVER)
@@ -127,29 +127,29 @@ VOID SetDlgDefaults(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("4096"));
 	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("20480"));
 	SendMessage(hwndSize, CB_ADDSTRING, 0, (LPARAM)TEXT("61440"));
-	if (props->szFileName[0] == 0)
+	/*(if (props->szFileName[0] == 0)
 	{
 		_stprintf_s(buf, TEXT("%d"), props->nPacketSize);
 		SetWindowText(hwndSize, buf);
 	}
 	else
-		SendMessage(hwndSize, CB_SETCURSEL, 0, 0);
+		SendMessage(hwndSize, CB_SETCURSEL, 0, 0);*/
 
 	// Set initial options for packet number dropdown
-	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("10"));
-	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("100"));
-	SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("1000"));
-	_stprintf_s(buf, TEXT("%d"), props->nNumToSend);
-	SetWindowText(hwndSend, buf);
+	//SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("10"));
+	//SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("100"));
+	//SendMessage(hwndSend, CB_ADDSTRING, 0, (LPARAM)TEXT("1000"));
+	//_stprintf_s(buf, TEXT("%d"), props->nNumToSend);
+	//SetWindowText(hwndSend, buf);
 
 	// Set the host name field
-	if (props->szHostName[0] == 0)
+	/*if (props->szHostName[0] == 0)
 	{
 		CHAR_2_TCHAR(buf, inet_ntoa(props->paddr_in->sin_addr), FILENAME_SIZE);
 		SetWindowText(hwndIP, buf);
 	}
 	else
-		SetWindowText(hwndIP, props->szHostName);
+		SetWindowText(hwndIP, props->szHostName);*/
 }
 
 /*-------------------------------------------------------------------------------------------------------------------------
@@ -189,7 +189,7 @@ BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 
 	dwDropDownSel = SendMessage(hwndSize, CB_GETCURSEL, 0, 0);
 	GetDlgItemText(hwndDlg, ID_TEXTBOX_FILE, buf, FILENAME_SIZE);
-	_tcscpy_s(props->szFileName, buf);
+	//_tcscpy_s(props->szFileName, buf);
 	
 	if (dwHostMode == ID_HOSTTYPE_SERVER)
 		return TRUE; // Don't need any more info for the server; we're done
@@ -211,7 +211,7 @@ BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 			MessageBox(NULL, TEXT("Please enter a non-zero number for packet size."), TEXT("Invalid byte number"), MB_ICONERROR);
 			return FALSE;
 		}
-		props->nPacketSize = dwPacketSize;
+		//props->nPacketSize = dwPacketSize;
 
 		ComboBox_GetText(hwndSend, buf, FILENAME_SIZE);
 		if (_stscanf_s(buf, TEXT("%d"), &dwSendNum) == 0 || dwSendNum <= 0)
@@ -219,8 +219,8 @@ BOOL FillTransferProps(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 			MessageBox(NULL, TEXT("Please enter a non-negative number of packets to send."), TEXT("Invalid send number"), MB_ICONERROR);
 			return FALSE;
 		}
-		props->nNumToSend = dwSendNum;
-		props->szFileName[0] = 0;
+		//props->nNumToSend = dwSendNum;
+		//props->szFileName[0] = 0;
 	}
 	return TRUE;
 }
@@ -273,21 +273,21 @@ BOOL GetDlgAddrInfo(HWND hwndDlg, DWORD dwHostMode, LPTransferProps props)
 	// IP address (maybe)
 	if(isdigit(buf[0]))
 	{
-		TCHAR_2_CHAR(hostip_string, buf, HOSTNAME_SIZE);
+		//TCHAR_2_CHAR(hostip_string, buf, HOSTNAME_SIZE);
 		if((dwBinaryAddr = inet_addr(hostip_string)) == INADDR_NONE)
 		{
 			MessageBox(NULL, TEXT("IP address must be in the form xxx.xxx.xxx.xxx."), TEXT("Invalid IP"), MB_ICONERROR);
 			return FALSE;
 		}
 		props->paddr_in->sin_addr.s_addr = dwBinaryAddr;
-		props->szHostName[0] = 0; // Don't check the host name when sending later 
+		//props->szHostName[0] = 0; // Don't check the host name when sending later 
 	}
 	else
 	{
 		props->paddr_in->sin_addr.s_addr = 0; // Get rid of current address
 
 		// We'll check at connection time whether this is a real host; store it for now
-		_tcscpy_s(props->szHostName, buf);
+		//_tcscpy_s(props->szHostName, buf);
 	}
 	return TRUE;
 }

@@ -9,6 +9,7 @@
 #include "resource.h"
 #include "../WinStorage.h"
 #include "../Utils.h"
+#include "../TransferProps.h"
 
 #define ID_RADIO_TCP		IDC_RADIO1
 #define ID_RADIO_UDP		IDC_RADIO2

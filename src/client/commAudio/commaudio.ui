@@ -14,16 +14,6 @@
    <string>commAudio</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QTableView" name="tableView">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>40</y>
-      <width>511</width>
-      <height>181</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QTableWidget" name="song_list_on_server">
     <property name="geometry">
      <rect>
@@ -283,16 +273,6 @@
     </property>
     <property name="text">
      <string>Push To Talk</string>
-    </property>
-   </widget>
-   <widget class="QTableView" name="tableView_2">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>260</y>
-      <width>511</width>
-      <height>121</height>
-     </rect>
     </property>
    </widget>
    <widget class="QTableWidget" name="playlist_client">

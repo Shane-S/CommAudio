@@ -1,0 +1,12 @@
+Comm Audio Protocol
+-------------------
+== Initial Handshake ==
+1. Client sends requested service type and name length followed by name
+    [] packet 0 {service type, name length} followed by name string
+2. Server responds with list of audio files
+    []  Sends number of files to follow
+    []  Sends metadata for each file (see Metadata below)
+
+== Metadata ==
+1. Server sends metadata packet containing string lengths of each metadata property, image size, and other properties (see Packets.h for more details)
+2. Server sends metadata strings and image according to previously transmitted lengths

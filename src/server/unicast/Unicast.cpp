@@ -1,4 +1,3 @@
-#include "Unicast.h"
 /**
  * Contains completion routines and helper functions for the Unicast portion of the server.
  *
@@ -7,6 +6,43 @@
  * @todo Add error logging mechanism
  * @todo Integrate with backend (database)
  */
+
+#include "Unicast.h"
+
+/**
+* Receives and delegates file streaming commands from clients.
+*
+* Handles the initial handshake (after accept) and calls the appropriate handlers for other packet
+* types.
+*
+* @param dwErrorCode                The error code (if any) from an error that occurred while sending.
+* @param dwNumberOfBytesTransferred The number of bytes transferred while sending.
+* @param lpOverlapped               Pointer to the overlapped struct, which is in fact a pointer to a
+*                                   TransferProps struct.
+* @param dwFlags                    Flags specified while sending. Not used here.
+*
+* @designer Shane Spoor
+* @author   Shane Spoor
+*/
+VOID CALLBACK UnicastGeneralRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
+{
+	LPTransferProps props = (LPTransferProps)lpOverlapped;
+	if (dwErrorCode)
+	{
+		TCHAR err_buf[8];
+		LogError(TEXT("ServerUniRecvCompletion"), itoa(dwErrorCode, err_buf, 10));
+		closesocket(props->socket);
+		CloseHandle(props->audioFile);
+		props->transferCancelled = TRUE;
+		return;
+	}
+
+	if (!dwNumberOfBytesTransfered) // Connection closed/reset
+	{
+		DestroyTransferProps(props);
+		return;
+	}
+}
 
 /**
  * Reads data into a buffer and sends it to the client.
@@ -24,14 +60,14 @@
  * @designer Shane Spoor
  * @author   Shane Spoor
  */
-VOID CALLBACK ServerUniSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
-	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
+VOID CALLBACK UnicastFileSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
 	LPTransferProps props = (LPTransferProps)lpOverlapped;
 	DWORD			bytesRead;
 	if (dwErrorCode) //|| dwNumberOfBytesTransfered != props->dataBuffer.len) // error or didn't send everything
 	{
-		LogError(TEXT("ServerUniSendCompletion"), dwErrorCode);
+		char err_buf[8];
+		LogError(TEXT("ServerUniSendCompletion"), itoa(dwErrorCode, err_buf, 10));
 		props->transferCancelled = TRUE;
 		return;
 	}
@@ -49,7 +85,18 @@ VOID CALLBACK ServerUniSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTr
 		return;
 	}
 	props->dataBuffer.len = bytesRead;
-	WSASend(props->socket, &props->dataBuffer, 1, NULL, 0, &props->wsaOverlapped, ServerUniSendCompletion);
+	WSASend(props->socket, &props->dataBuffer, 1, NULL, 0, &props->wsaOverlapped, UnicastFileSend);
+}
+
+/**
+ * Reads the search results from
+ *
+ *
+ *
+ */
+VOID CALLBACK SearchResultsSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
+{
+
 }
 
 /**
@@ -58,22 +105,15 @@ VOID CALLBACK ServerUniSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTr
  *
  *
  */
-VOID CALLBACK ServerUniRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
-	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
-{
-	LPTransferProps props = (LPTransferProps)lpOverlapped;
-	if (dwErrorCode)
-	{
-		LogError(TEXT("ServerUniRecvCompltion"), dwErrorCode);
-		closesocket(props->socket);
-		CloseHandle(props->audioFile);
-		props->transferCancelled = TRUE;
-		return;
-	}
+VOID CALLBACK VoiceDataRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags);
 
-	if (!dwNumberOfBytesTransfered) // Connection closed/reset
-	{
-		DestroyTransferProps(props);
-		return;
-	}
-}
+/**
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ */
+VOID CALLBACK VoiceDataSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags);

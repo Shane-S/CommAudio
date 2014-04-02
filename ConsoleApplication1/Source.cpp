@@ -1,30 +1,3 @@
-/*---------------------------------------------------------------------------------------
---	SOURCE FILE:		tcp_clnt.c - A simple TCP client program.
---
---	PROGRAM:			tclnt.exe
---
---	FUNCTIONS:			Winsock 2 API
---
---	DATE:				January 11, 2006
---
---	REVISIONS:			(Date and Description)
---
---						Oct. 1, 2007 (A. Abdulla):
---
---						Changed the read loop to better handle the
---						blocking recv call.
---
---	DESIGNERS:			Aman Abdulla
---
---	PROGRAMMERS:		Aman Abdulla
---
---	NOTES:
---	The program will establish a TCP connection to a user specifed server.
---  The server can be specified using a fully qualified domain name or and
---	IP address. After the connection has been established the user will be
---  prompted for date. The date string is then sent to the server and the
---  response (echo) back from the server is displayed.
----------------------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <winsock2.h>
 #include <errno.h>
@@ -93,7 +66,6 @@ int main(int argc, char **argv)
 	
 	bp = rbuf;
 	bytes_to_read = BUFSIZE;
-	int bytes_actually_fucking_read = 0;
 	file = fopen("accadecca.wav", "wb");
 	fseek(file, 0, SEEK_SET);
 	// client makes repeated calls to recv until no more data is expected to arrive.

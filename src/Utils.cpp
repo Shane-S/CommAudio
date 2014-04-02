@@ -14,11 +14,11 @@
  * Prints the function name and error to the error log.
  *
  * @param functionName The name of the function where the error occurred.
- * @param err		   The error number corresponding to the error.
+ * @param msg		   The error message to log with the function name.
  */
-VOID LogError(const TCHAR *functionName, const int err)
+VOID LogError(const TCHAR *functionName, const TCHAR *msg)
 {
-	MessageBoxPrintf(MB_ICONERROR, TEXT("Error"), TEXT("Error in %s: %d"), functionName, err);
+	MessageBoxPrintf(MB_ICONERROR, TEXT("Error"), TEXT("Error in %s: %s"), functionName, msg);
 	return;
 }
 

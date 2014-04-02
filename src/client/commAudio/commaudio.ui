@@ -18,19 +18,19 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>50</y>
+      <y>40</y>
       <width>511</width>
-      <height>331</height>
+      <height>181</height>
      </rect>
     </property>
    </widget>
-   <widget class="QTableWidget" name="tableWidget">
+   <widget class="QTableWidget" name="song_list_on_server">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>51</y>
+      <y>40</y>
       <width>511</width>
-      <height>331</height>
+      <height>181</height>
      </rect>
     </property>
     <column>
@@ -212,7 +212,7 @@
      </font>
     </property>
     <property name="text">
-     <string>Song Queue:</string>
+     <string>Song List:</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_2">
@@ -283,6 +283,69 @@
     </property>
     <property name="text">
      <string>Push To Talk</string>
+    </property>
+   </widget>
+   <widget class="QTableView" name="tableView_2">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>260</y>
+      <width>511</width>
+      <height>121</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QTableWidget" name="playlist_client">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>260</y>
+      <width>511</width>
+      <height>121</height>
+     </rect>
+    </property>
+    <column>
+     <property name="text">
+      <string>Art</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>Song</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>Artist</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>Album</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>Year</string>
+     </property>
+    </column>
+   </widget>
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>230</y>
+      <width>131</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Playlist:</string>
     </property>
    </widget>
   </widget>

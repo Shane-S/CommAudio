@@ -21,6 +21,7 @@
 
 static DWORD	recvd	= 0;	// The number of bytes or packets received
 static HANDLE	destFile = 0;	// A file to store the transferred data (if specified by the user)
+LPFN_ACCEPTEX   AcceptPtr;
 /**
  * Initialises a TCP or UDP socket for use by the server.
  *
@@ -164,6 +165,8 @@ BOOL ListenTCP(LPTransferProps props)
 	SOCKET accept;
 	DWORD flags = 0, error = 0;
 	DWORD bytesRead;
+	GUID  accept_id = WSAID_ACCEPTEX;
+	DWORD out_buf;
 	char *buf = (char *)malloc(BUFSIZE);
 
 	if (listen(props->socket, 5) == SOCKET_ERROR)
@@ -172,11 +175,14 @@ BOOL ListenTCP(LPTransferProps props)
 		return FALSE;
 	}
 
-	if ((accept = WSAAccept(props->socket, NULL, NULL, NULL, NULL)) == SOCKET_ERROR)
+	WSAIoctl(props->socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &accept_id, sizeof(accept_id), &AcceptPtr, sizeof(AcceptPtr), &out_buf,
+		NULL, NULL);
+
+	/*if ((accept = WSAAccept(props->socket, NULL, NULL, NULL, NULL)) == SOCKET_ERROR)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("WSAAccept Failed"), TEXT("WSAAccept() failed with socket error %d"), WSAGetLastError());
 		return FALSE;
-	}
+	}*/
 
 	closesocket(props->socket); // close the listening socket
 	props->socket = accept;		// assign the new socket to props->socket
@@ -184,7 +190,7 @@ BOOL ListenTCP(LPTransferProps props)
 	props->audioFile = CreateFile("C:\\Users\\Shane\\Music\\Zune\\Fleetwood Mac\\Rumours\\07 The Chain.mp3", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	ReadFile(props->audioFile, props->dataBuffer.buf, BUFSIZE, &bytesRead, NULL);
 	props->dataBuffer.len = bytesRead;
-	WSASend(props->socket, &props->dataBuffer, 1, NULL, 0, (LPOVERLAPPED)props, ServerUniSendCompletion);
+	WSASend(props->socket, &props->dataBuffer, 1, NULL, 0, (LPOVERLAPPED)props, UnicastFileSend);
 
 	if (error && error != WSA_IO_PENDING)
 	{
@@ -220,3 +226,37 @@ BOOL ListenUDP(LPTransferProps props)
 }
 
 
+/**
+ * Starts an overlapped accept operation on the listen socket.
+ *
+ * @param listenSocket      A valid socket in listening mode.
+ * @param newSock           The new socket on which to accept the connection.
+ * @param lpNameLen         A buffer to receive the client's name's length when accept completes.
+ * @param dwRecvDataLen     The size of lpNameLen.
+ * @param lpdwBytesReceived Pointer to a DWORD which will receive the amount of data actually transferred.
+ * @param lpOverlapped      The overlapped structure to be activated on accepting a connection.
+ *
+ * @return -1 on failure, 0 if the operation is still in progress, and 1 if a socket was accepted within
+ *         the function call.
+ *
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @data     April 3rd, 2014
+ */
+INT OverlappedAccept(SOCKET listenSocket, SOCKET newSock, PVOID lpNameLen, DWORD dwRecvDataLen, LPDWORD lpdwBytesReceived,
+	                    LPOVERLAPPED lpOverlapped)
+{
+	errno_t error;
+	if (!AcceptPtr(listenSocket, newSock, lpNameLen, dwRecvDataLen, sizeof(sockaddr_in)+16, sizeof(sockaddr_in)+16,
+		lpdwBytesReceived, lpOverlapped) && ((error = WSAGetLastError()) != WSA_IO_PENDING))
+	{
+		TCHAR message[128];
+		_tcprintf_s(message, TEXT("%s, error number %d."), TEXT("Error accepting socket"), error);
+		LogError(TEXT("OverlappedAccept"), message);
+		return -1;
+	}
+	else if (error == WSA_IO_PENDING)
+		return 0;
+
+	return 1;
+}

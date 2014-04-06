@@ -6,7 +6,9 @@
 #ifndef SERVER_TRANSFER_H
 #define SERVER_TRANSFER_H
 
-#include <time.h>
+#include <ws2tcpip.h>
+#include <mswsock.h>
+#include <conio.h>
 #include "../TransferProps.h"
 #include "../Utils.h"
 
@@ -30,4 +32,9 @@ VOID CALLBACK ServerUniSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTr
 
 // Prepare server for next volley of packets
 VOID ServerCleanup(LPTransferProps props);
+
+// Wrapper for AcceptEx
+SOCKET OverlappedAccept(SOCKET sListenSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, LPDWORD lpdwBytesReceived,
+                        LPOVERLAPPED lpOverlapped);
+VOID CALLBACK UnicastFileSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags);
 #endif

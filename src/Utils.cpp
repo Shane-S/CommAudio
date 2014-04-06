@@ -6,7 +6,7 @@
  *
  * @todo Change LogError to actually log the error as well.
  * @todo Add format string printing to LogError
--------------------------------------------------------------------------------------------------------------------------*/
+ */
 
 #include "Utils.h"
 

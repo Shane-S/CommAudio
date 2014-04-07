@@ -64,6 +64,7 @@ void commAudio::newConnectDialog()
     connectionSettings = connectDialog->connectionSettings;
     clientNetwork.setConnectionSettings(connectionSettings);
 
+    clientNetwork.initWinsock();
     clientNetwork.connectToTCPServer();
 }
 

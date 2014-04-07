@@ -3,18 +3,41 @@
 
 #include <WinSock2.h>   //Windows sockets library
 #include <WS2tcpip.h>   //Windows multicast structure
+#include <Windows.h>
 #include <string>       //C++ string library
+#include "bass.h"
+
+#define WM_SOCKET   (WM_USER + 1)
 
 class ClientNetwork
 {
 private:
-    std::string     serverIP;
-    int             portNo;
-    SOCKET          serverSocket;
+    std::string         serverIP;
+    int                 portTCP;
+    int                 portUDP;
+    SOCKET              serverTCPSocket;
+    SOCKET              serverUDPSocket;
+    WSADATA             stWSAData;
+    struct sockaddr_in  serverUDPAddr;
+    HWND                hwnd;
 
 public:
-    ClientNetwork(std::string serverIP, int portNo) : serverIP(serverIP), portNo(portNo) {};
-    int connectToServer();
-}
+    ClientNetwork() {}
+    ClientNetwork(std::string serverIP, int portTCP, int portUDP) : serverIP(serverIP), portTCP(portTCP), portUDP(portUDP) {};
+    
+    void initWinsock(); //Call WSAStartup
+    void terminateWinSock();
+
+    int connectToTCPServer();
+    int initUDPClient();
+    
+    void sendAudioData(void *data, bool isTCP, bool isFile);
+    void getAudioData(bool isTCP);
+
+    SOCKET getTCPSocket() {return serverTCPSocket;}
+    void setHWND(HWND hwnd_) {hwnd = hwnd_;}
+
+    void closeSocket(SOCKET socket);
+};
 
 #endif

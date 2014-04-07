@@ -10,6 +10,7 @@
 
 #include "ui_commaudio.h"
 #include "ClientNetwork.h"
+#include "ConnectionSettings.h"
 #include "bass.h"
 
 class commAudio : public QMainWindow
@@ -25,6 +26,7 @@ public:
 private:
     Ui::commAudioClass ui;
     ClientNetwork clientNetwork;
+    ConnectionSettings connectionSettings;
     int playerState; //0 = paused; 1 = playing
     HSTREAM streamHandle;
     HSTREAM streamBuffer;

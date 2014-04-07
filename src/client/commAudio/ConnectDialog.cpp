@@ -7,25 +7,25 @@ ConnectDialog::ConnectDialog(QWidget * parent) : QDialog(parent)
 
 void ConnectDialog::getDataAndClose()
 {
-    if(ui.ip_address->text().isNull() == false)
-    {
-        connectionSettings.setIpAddress(ui.ip_address->text().toStdString());
-    }
+    QString temp;
+    std::string temp1;
+    int temp2;
 
-    if(ui.tcp_port_number->text().isNull() == false)
-    {
-        connectionSettings.setPortTCP(ui.tcp_port_number->text().toInt());
-    }
+    temp = ip_address->text();
+    temp1 = temp.toStdString();
+    connectionSettings.setIpAddress(temp1);
 
-    if(ui.udp_port_no->text().isNull() == false)
-    {
-        connectionSettings.setPortUDP(ui.udp_port_no->text().toInt());
-    }
+    temp = tcp_port_number->text();
+    temp2 = temp.toInt();
+    connectionSettings.setPortTCP(temp2);
 
-    if(ui.username->text().isNull() == false)
-    {
-        connectionSettings.setUsername(ui.username->text().toStdString());
-    }
+    temp = udp_port_no->text();
+    temp2 = temp.toInt();
+    connectionSettings.setPortUDP(temp2);
 
+    temp = username->text();
+    temp1 = temp.toStdString();
+    connectionSettings.setUsername(temp1);
+    
     close();
 }

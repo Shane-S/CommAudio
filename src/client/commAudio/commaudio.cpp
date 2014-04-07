@@ -56,7 +56,11 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
 void commAudio::newConnectDialog()
 {
     ConnectDialog *connectDialog = new ConnectDialog;
-    connectDialog->show();
+    //connectDialog->show();
+    connectDialog->exec();
+    
+    connectionSettings = connectDialog->connectionSettings;
+
 }
 
 void commAudio::newAudioUploadDialog()

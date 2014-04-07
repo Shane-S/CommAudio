@@ -14,7 +14,6 @@ public:
     ConnectionSettings connectionSettings;
 
 private:
-    Ui::connect_dialog ui;
 
 private slots:
     void getDataAndClose();

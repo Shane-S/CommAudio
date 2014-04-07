@@ -13,6 +13,8 @@ commAudio::commAudio(QWidget *parent)
     BASS_Init(device, freq, 0, 0, NULL);
     streamHandle = BASS_StreamCreate(freq, 2, 0, STREAMPROC_PUSH, 0);
 
+    clientNetwork.setHWND((HWND)WId());
+
     ui.setupUi(this);
 }
 
@@ -60,7 +62,9 @@ void commAudio::newConnectDialog()
     connectDialog->exec();
     
     connectionSettings = connectDialog->connectionSettings;
+    clientNetwork.setConnectionSettings(connectionSettings);
 
+    clientNetwork.connectToTCPServer();
 }
 
 void commAudio::newAudioUploadDialog()

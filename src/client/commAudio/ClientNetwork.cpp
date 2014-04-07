@@ -3,12 +3,21 @@
 *
 * PROGRAM:         commAudio
 *
-* FUNCTIONS:       list_of_functions
+* FUNCTIONS:       
+*                   - void initWinsock(); 
+*                   - void terminateWinSock();
+*                   - int connectToTCPServer();
+*                   - int initUDPClient();
+*                   - void sendAudioData(void *data, bool isTCP, bool isFile);
+*                   - void getAudioData(bool isTCP);
+*                   - SOCKET getTCPSocket() {return serverTCPSocket;}
+*                   - void setHWND(HWND hwnd_) {hwnd = hwnd_;}
+*                   - void closeSocket(SOCKET socket);
 *
 * DATE:            March 31, 2014
 *
 * REVISIONS:       (Date and Description)
-*                  revision_date     revision_description
+*                  April 4, 2014     Added a bunch of extra functions.
 *
 * DESIGNER:        Abhishek Bhardwaj
 *
@@ -19,13 +28,31 @@
 ------------------------------------------------------------------------------------------------------------------------*/
 #include "ClientNetwork.h"
 
+/*---------------------------------------------------------------------------------------------------------------------------
+* FUNCTION:    initWinsock()
+*
+* DATE:        April 4th, 2014
+*
+* REVISIONS:   (Date and Description)
+*              revision_date     revision_description
+*
+* DESIGNER:    Abhishek Bhardwaj
+*
+* PROGRAMMER:  Abhishek Bhardwaj
+*
+* INTERFACE:   void ClientNetwork::initWinsock()
+*
+* RETURNS:     void
+*                    
+* NOTES:       A wrapper function that initiates the use of the Winsock DLL.
+--------------------------------------------------------------------------------------------------------------------------*/
 void ClientNetwork::initWinsock()
 {
     WSAStartup(MAKEWORD(2,2), &stWSAData);
 }
 
 /*---------------------------------------------------------------------------------------------------------------------------
-* FUNCTION:    connectToServer()
+* FUNCTION:    connectToTCPServer()
 *
 * DATE:        March 31, 2014
 *
@@ -36,7 +63,7 @@ void ClientNetwork::initWinsock()
 *
 * PROGRAMMER:  Abhishek Bhardwaj
 *
-* INTERFACE:   int ClientNetwork::connectToServer()
+* INTERFACE:   int ClientNetwork::connectToTCPServer()
 *                      
 * RETURNS:     int
 *                       0       connection to server, successful
@@ -59,9 +86,9 @@ int ClientNetwork::connectToTCPServer()
     //Initialize and setup address structure
     memset((char *)&server, 0, sizeof(struct sockaddr_in));
     server.sin_family = AF_INET;
-    server.sin_port = htons(portTCP);
+    server.sin_port = htons(connectionSettings.getPortTCP());
     
-    if((hp = gethostbyname(serverIP.c_str())) == NULL)
+    if((hp = gethostbyname(connectionSettings.getIpAddress().c_str())) == NULL)
     {
         return -2; //couldn't find server address
     }
@@ -78,6 +105,27 @@ int ClientNetwork::connectToTCPServer()
     return 0; //successfully connected to the server
 }
 
+/*---------------------------------------------------------------------------------------------------------------------------
+* FUNCTION:    initUDPClient()
+*
+* DATE:        April 4, 2014
+*
+* REVISIONS:   (Date and Description)
+*
+* DESIGNER:    Abhishek Bhardwaj
+*
+* PROGRAMMER:  Abhishek Bhardwaj
+*
+* INTERFACE:   int ClientNetwork::initUDPClient()
+*                      
+* RETURNS:     int
+*                       0       connection to server, successful
+*                       -1      error creating socket
+*                       -2      unknown server address
+*                       -3      couldn't bind name to socket
+*
+* NOTES:       Initializes a UDP client socket and sets it up with required parameters.
+--------------------------------------------------------------------------------------------------------------------------*/
 int ClientNetwork::initUDPClient()
 {
     struct sockaddr_in server, client;
@@ -91,9 +139,9 @@ int ClientNetwork::initUDPClient()
     //Initialize and setup server architecture structure
     memset((char *)&server, 0, sizeof(struct sockaddr_in));
     server.sin_family = AF_INET;
-    server.sin_port = htons(portUDP);
+    server.sin_port = htons(connectionSettings.getPortUDP());
 
-    if((hp = gethostbyname(serverIP.c_str())) == NULL)
+    if((hp = gethostbyname(connectionSettings.getIpAddress().c_str())) == NULL)
     {
         return -2; //couldn't find server address
     }
@@ -115,8 +163,26 @@ int ClientNetwork::initUDPClient()
     return 0; //UDP client successfully initialized
 }
 
-//use when sending audio data to server - can use the same code on the server
-//protocol = 0 = TCP;; protocol = 1 = UDP
+/*---------------------------------------------------------------------------------------------------------------------------
+* FUNCTION:    sendAudioData(void *data, bool isTCP, bool isFile)
+*
+* DATE:        April 4, 2014
+*
+* REVISIONS:   (Date and Description)
+*
+* DESIGNER:    Abhishek Bhardwaj
+*
+* PROGRAMMER:  Abhishek Bhardwaj
+*
+* INTERFACE:   int ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
+*                           void *data  - data to be sent to the server [could be a filename or pointer to a memory location]
+*                           bool isTCP  - switch to specify what protocol to use to send the data [true for TCP, false for UDP]
+*                           bool isFile - switch to specify if the *data is an actual file on disk or a pointer to a memory location.
+* RETURNS:     void
+*
+* NOTES:       Sends audio data to the server (capable to do it with both TCP or UDP). Audio data could be an actual file
+*              or an actual memory location.
+--------------------------------------------------------------------------------------------------------------------------*/
 void ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
 {
     char streamDataBuffer[2048];

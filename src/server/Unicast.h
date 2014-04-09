@@ -1,6 +1,8 @@
 #ifndef UNICAST_H
 #define UNICAST_H
-#include "../ServerTransfer.h"
+
+#include "ServerTransfer.h"
+
 
 // Completion routines for various client requests
 VOID CALLBACK UnicastGeneralRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,LPOVERLAPPED lpOverlapped, DWORD dwFlags);

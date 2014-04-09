@@ -1,11 +1,12 @@
 #include "ahm.h"
+#include "bass.h"
 using namespace std;
 
 int main(void)
 {
 	cout << "Reading library in.." << endl;
 	
-	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\Raz\\Music\\"), string(",mp3,"), 1, 10000)); 
+	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\RazLT\\Music\\"), string(",mp3,"), 1, 10000)); 
 	
 	for(int i = 0; i < lib->numsongs; i++)
 	{

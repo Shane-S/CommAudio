@@ -1,8 +1,8 @@
 #include <Windows.h>
 #include <iostream>
-#include <fileref.h>
-#include <tag.h>
-#include <tpropertymap.h>
+#include "taglib/fileref.h"
+#include "taglib/tag.h"
+#include "taglib/tpropertymap.h"
 #include <dirent.h>
 #include <memory>
 #include <string>

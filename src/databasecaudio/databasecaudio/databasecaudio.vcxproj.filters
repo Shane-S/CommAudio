@@ -16,6 +16,9 @@
     <Filter Include="Header Files\Taglib">
       <UniqueIdentifier>{533eadb1-c9ed-4d54-a845-ddfd650dbae5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\BASS">
+      <UniqueIdentifier>{99d9c87f-642e-417a-abc1-e9d00285df60}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -94,6 +97,15 @@
     </ClInclude>
     <ClInclude Include="audioManagement.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="taglib\tag.h">
+      <Filter>Header Files\Taglib</Filter>
+    </ClInclude>
+    <ClInclude Include="taglib\fileref.h">
+      <Filter>Header Files\Taglib</Filter>
+    </ClInclude>
+    <ClInclude Include="bass24\bass.h">
+      <Filter>Header Files\BASS</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

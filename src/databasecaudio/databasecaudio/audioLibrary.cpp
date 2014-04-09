@@ -94,7 +94,7 @@ void AudioLibrary::retrieveDirectory()
 						{
 							SongData sData(string(albumDirectory), artDirectory, fileType);
 							this->numsongs++;
-							//printf("Reading data for song #%d\n", numsongs);
+							printf("Reading data for song #%d\n", numsongs);
 							this->songList.push_back(sData);	
 						}catch(const std::invalid_argument& e){
 							std::cout << "Invalid song name!" << std::endl;
@@ -204,9 +204,9 @@ string AudioLibrary::getCoverArt(string songDirectory)
  */
 bool AudioLibrary::checkType(string type)
 {
-	for(string sType : supportedTypes)
+	for(int i = 0; i < supportedTypes.size(); i++)
 	{
-		if(type == sType)
+		if(type == supportedTypes.at(i))
 			return TRUE;
 	}
 	return FALSE;

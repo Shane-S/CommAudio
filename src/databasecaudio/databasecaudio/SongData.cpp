@@ -23,9 +23,10 @@ SongData::SongData(string directory, string artDirectory, string fileType)
 	this->fileType = fileType;
 	this->artDirectory = artDirectory;
 	this->directory = directory;
+	this->albumArt = 1;
 	
 	setMetadata(fRef);
-	setProperties(fRef);
+	setProperties(fRef);	
 }
 /**
  * Retrieves the metadata of the provided FileRef and sets
@@ -39,12 +40,10 @@ SongData::SongData(string directory, string artDirectory, string fileType)
  */
 void SongData::setMetadata(TagLib::FileRef sRef)
 {
-	TagLib::Tag * mdata = sRef.tag();
-
-	setArtist(toString(mdata->artist()));
-	setAlbum(toString(mdata->album()));
-	setTitle(toString(mdata->title()));
-	this->year = mdata->year();
+	setArtist(toString(sRef.tag()->artist()));
+	setAlbum(toString(sRef.tag()->album()));
+	setTitle(toString(sRef.tag()->title()));
+	this->year = sRef.tag()->year();
 }
 /**
  * Retrieves the audio properties of the provided FileRef and sets

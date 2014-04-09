@@ -109,6 +109,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\tag.lib" />
+    <Library Include="bass.lib" />
+    <Library Include="tag.lib" />
   </ItemGroup>
 </Project>

@@ -19,7 +19,7 @@ public:
 	int sampleRate;
 	int albumArt;
 
-	explicit SongData(std::string directory, std::string artDirectory, std::string fileType);
+	SongData(std::string directory, std::string artDirectory, std::string fileType);
 	std::string toString(TagLib::String str);
 
 private:

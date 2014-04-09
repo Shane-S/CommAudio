@@ -72,22 +72,4 @@ typedef struct pkt02
 	uint32_t audio_len;
 } S_VOICE_PKT;
 
-/**
- * Sends details about song metadata to follow.
- *
- * @property str_lens   The length of each part of the metadata (name, artist, album).
- * @property img_size   The size (in bytes) of the album art included in the metadata.
- * @property song_size  The size (in bytes) of the song data to follow the metadata.
- * @property chunk_size The size of each chunk of audio data. Mainly applicable to WAV files.
- *
- * @struct S_SONG_DATA
- */
-typedef struct pkt03
-{
-	uint8_t  str_lens[NUM_METASTRS];
-	uint32_t img_size;
-	uint32_t song_size;
-	uint16_t chunk_size;
-} S_SONG_DATA;
-
 #endif

@@ -1,6 +1,7 @@
 #ifndef METADATA_H
 #define METADATA_H
 
+#include <WinSock2.h>
 #include <memory>
 #include <vector>
 #include <list>

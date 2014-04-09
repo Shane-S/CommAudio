@@ -7,13 +7,11 @@ commAudio::commAudio(QWidget *parent)
 {
     int freq = 44100;
     int device = -1;
-
-    playerState = 0; //start player in paused state
     
     BASS_Init(device, freq, 0, 0, NULL);
     streamHandle = BASS_StreamCreate(freq, 2, 0, STREAMPROC_PUSH, 0);
 
-    clientNetwork.setHWND((HWND)WId());
+    clientNetwork.setHWND((HWND)this->winId());
 
     ui.setupUi(this);
 }
@@ -34,16 +32,17 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
         case FD_READ:
             flags = 0;
             buffer.buf = (CHAR*)dataBuffer;
-            buffer.len = sizeof(char) * 10000;
-            WSARecv(clientNetwork.getTCPSocket(), &buffer, 1, &bytesReceived, &flags, NULL, NULL);
+            buffer.len = 2048;
+            int err = WSARecv(clientNetwork.getTCPSocket(), &buffer, 1, &bytesReceived, &flags, NULL, NULL);
             
             if(bytesReceived > 0)
             {
-                if(playerState == 0)
+                /**if(playerState == 0)
                 {
                     playerState = 1;
-                }
-                BASS_StreamPutData(streamHandle, dataBuffer, bytesReceived);
+                }*/
+                err = BASS_StreamPutData(streamHandle, dataBuffer, bytesReceived);
+                err = BASS_ErrorGetCode();
             }
 
             break;
@@ -57,6 +56,8 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
 
 void commAudio::newConnectDialog()
 {
+    playerState = 0; //start player in paused state
+
     ConnectDialog *connectDialog = new ConnectDialog;
     //connectDialog->show();
     connectDialog->exec();
@@ -66,6 +67,7 @@ void commAudio::newConnectDialog()
 
     clientNetwork.initWinsock();
     clientNetwork.connectToTCPServer();
+    //clientNetwork.sendPing();
 }
 
 void commAudio::newAudioUploadDialog()
@@ -85,6 +87,9 @@ void commAudio::playPauseButtonClick()
             //player is paused..person wants to play so we play and then change icons
             QIcon icon("Resources/play.png");
             ui.player_play_pause_toggle_btn->setIcon(icon);
+
+            BASS_ChannelPause(streamHandle);
+
             break;
         }
         case 1: //currently playing

@@ -89,6 +89,11 @@ public:
         label_4->setObjectName(QStringLiteral("label_4"));
         label_4->setGeometry(QRect(30, 120, 101, 31));
         label_4->setFont(font);
+        QWidget::setTabOrder(ip_address, tcp_port_number);
+        QWidget::setTabOrder(tcp_port_number, udp_port_no);
+        QWidget::setTabOrder(udp_port_no, username);
+        QWidget::setTabOrder(username, connectDlg_connect_btn);
+        QWidget::setTabOrder(connectDlg_connect_btn, connectDlg_cancel_btn);
 
         retranslateUi(connect_dialog);
         QObject::connect(connectDlg_connect_btn, SIGNAL(clicked()), connect_dialog, SLOT(getDataAndClose()));
@@ -101,14 +106,14 @@ public:
     {
         connect_dialog->setWindowTitle(QApplication::translate("connect_dialog", "Connect to Server", 0));
         label->setText(QApplication::translate("connect_dialog", "Server IP:", 0));
-        ip_address->setText(QString());
-        tcp_port_number->setText(QString());
+        ip_address->setText(QApplication::translate("connect_dialog", "192.168.43.100", 0));
+        tcp_port_number->setText(QApplication::translate("connect_dialog", "7000", 0));
         label_2->setText(QApplication::translate("connect_dialog", "TCP Port No.:", 0));
         connectDlg_connect_btn->setText(QApplication::translate("connect_dialog", "Connect", 0));
         connectDlg_cancel_btn->setText(QApplication::translate("connect_dialog", "Cancel", 0));
-        username->setText(QString());
+        username->setText(QApplication::translate("connect_dialog", "Abhishek", 0));
         label_3->setText(QApplication::translate("connect_dialog", "Username:", 0));
-        udp_port_no->setText(QString());
+        udp_port_no->setText(QApplication::translate("connect_dialog", "7001", 0));
         label_4->setText(QApplication::translate("connect_dialog", "UDP Port No.:", 0));
     } // retranslateUi
 

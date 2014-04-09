@@ -32,6 +32,7 @@ public:
     
     void sendAudioData(void *data, bool isTCP, bool isFile);
     void getAudioData(bool isTCP);
+    void sendPing();
 
     SOCKET getTCPSocket() {return serverTCPSocket;}
     void setHWND(HWND hwnd_) {hwnd = hwnd_;}

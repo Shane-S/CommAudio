@@ -230,6 +230,22 @@ void ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
     }
 }
 
+void ClientNetwork::sendPing()
+{
+    DWORD SendBytes = 0;
+    DWORD BytesTransferred = 0;
+    WSABUF buffer;
+    buffer.len = sizeof(char);
+    buffer.buf = (char *) "This is a fucking test";
+    WSAOVERLAPPED ov;
+    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+  
+    //TCP
+    WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, &ov, NULL);
+
+    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+}
+
 //use when receving audio data from server - can use same code on the server
 void ClientNetwork::getAudioData(bool isTCP)
 {

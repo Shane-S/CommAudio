@@ -46,7 +46,7 @@
     </font>
    </property>
    <property name="text">
-    <string/>
+    <string>192.168.43.100</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="tcp_port_number">
@@ -64,7 +64,7 @@
     </font>
    </property>
    <property name="text">
-    <string/>
+    <string>7000</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_2">
@@ -126,7 +126,7 @@
     </font>
    </property>
    <property name="text">
-    <string/>
+    <string>Abhishek</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_3">
@@ -175,7 +175,7 @@
     </font>
    </property>
    <property name="text">
-    <string/>
+    <string>7001</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_4">
@@ -197,6 +197,14 @@
    </property>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>ip_address</tabstop>
+  <tabstop>tcp_port_number</tabstop>
+  <tabstop>udp_port_no</tabstop>
+  <tabstop>username</tabstop>
+  <tabstop>connectDlg_connect_btn</tabstop>
+  <tabstop>connectDlg_cancel_btn</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

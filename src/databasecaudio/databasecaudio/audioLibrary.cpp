@@ -228,9 +228,10 @@ std::vector<string> AudioLibrary::grabPlaylist()
 
 	for(int i = 0; i < numsongs; i++)
 	{
-		string temp = "," + songList.at(i).name + "," + songList.at(i).album + "," + songList.at(i).artist + "," + songList.at(i).albumArt +
-						"," + songList.at(i).length + "," + songList.at(i).bitrate;
-		plist.push_back(temp);
+		std::stringstream out;
+		out << "," << songList.at(i).name << "," << songList.at(i).album << "," << songList.at(i).artist << "," << songList.at(i).albumArt <<
+						"," << songList.at(i).length << "," << songList.at(i).bitrate;
+		plist.push_back(out.str());
 	}
 
 	return plist;

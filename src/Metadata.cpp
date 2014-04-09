@@ -7,46 +7,6 @@ using std::string;
 using std::shared_ptr;
 
 /**
- * Parses the metadata contained in @a metadata into a struct.
- *
- * Note that the function prints an error message and exit the program on failure.
- *
- * @param metadata The serialised metadata packet containing the metadata to be parsed.
- * @param lengths  The length of each string in the metadata packet.
- * @param art_size The size (in bytes) of the album art for this song.
- *
- * @return Pointer to a metadata struct containing metadata pulled from the packet.
- *         Returns NULL on failure.
- *
- * @designer Shane Spoor
- * @author   Shane Spoor
- * @date     March 29th, 2014
- */
-Metadata::Metadata(const char *metadata, const uint8_t strLens[NUM_METASTRS], const uint32_t artSize)
-{
-	int offset = 0;
-
-	if (!metadata)
-		throw "Metadata::Metadata: No metadata provided";
-
-	for (int i = 0; i < NUM_METASTRS; i++)
-	{
-		string temp(metadata + offset, strLens[i]);
-		metaStrings_.push_back(temp);
-		offset += strLens[i];
-	}
-
-	memcpy(&track_, metadata + offset, sizeof(uint32_t));
-	memcpy(&year_, metadata + offset + sizeof(uint32_t), sizeof(uint32_t));
-
-	albumArt_ = (uint8_t *)malloc(artSize);
-	if (!albumArt_)
-		throw "Metadata::Metadata: Couldn't allocate memory for albumArt_";
-
-	memcpy(&albumArt_, metadata + offset, artSize);
-}
-
-/**
  * Frees the album art array.
  *
  * @designer Shane Spoor

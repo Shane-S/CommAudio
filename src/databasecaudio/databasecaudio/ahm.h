@@ -21,7 +21,6 @@ private:
 	void		retrieveDirectory();
 	std::string	getFileType(std::string file);
 	std::string	getCoverArt(std::string songDirectory);
-
 };
 
 #endif

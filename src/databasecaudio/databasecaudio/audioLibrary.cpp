@@ -211,3 +211,28 @@ bool AudioLibrary::checkType(string type)
 	}
 	return FALSE;
 }
+/**
+ * Takes the songlist and puts it in a format for easy data transfer.
+ *
+ * Returns a vector of strings, where each string is the song metadata of the song at the same point.
+ *
+ * Returns a vector of song metadata strings.
+ *
+ * @designer Ramzi Chennafi
+ * @author   Ramzi Chennafi
+ * @date     April 3rd, 2014
+ */
+std::vector<string> AudioLibrary::grabPlaylist()
+{
+	std::vector<string> plist;
+
+	for(int i = 0; i < numsongs; i++)
+	{
+		string temp = "," + songList.at(i).name + "," + songList.at(i).album + "," + songList.at(i).artist + "," + songList.at(i).albumArt +
+						"," + songList.at(i).length + "," + songList.at(i).bitrate;
+		plist.push_back(temp);
+	}
+
+	return plist;
+}
+

@@ -18,7 +18,7 @@ int main(void)
 		cout << "Bitrate: " << lib->songList.at(i).bitrate << " | Channels: " << lib->songList.at(i).channels << " | SampleRate: " << lib->songList.at(i).sampleRate << endl;
 		cout << "Length: " << lib->songList.at(i).length << endl;
 	}
-
+	BASS_Init(-1, 44100, 0,0,0);
 	int	n, bytes_to_read;
     int	client_len, port = SERVER_TCP_PORT, err;
 	SOCKET sd, new_sd;
@@ -93,7 +93,7 @@ int main(void)
 		
             while(1)
             {
-				const char * dir = lib->songList.at(3).directory.c_str();
+				const char * dir = lib->songList.at(2).directory.c_str();
                 sendAudioData(dir, true, true, new_sd);
             }
 
@@ -135,6 +135,7 @@ void sendAudioData(const char * filename, bool isTCP, bool isFile, SOCKET socket
 {
     char streamDataBuffer[2048];
     HSTREAM streamBuffer;
+	DWORD readLength = 0;
     DWORD SendBytes = 0;
     DWORD BytesTransferred = 0;
     WSABUF buffer;
@@ -142,23 +143,22 @@ void sendAudioData(const char * filename, bool isTCP, bool isFile, SOCKET socket
     WSAOVERLAPPED ov;
     ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     
-    if(isFile) //not streaming from memory
-    {
-        streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
-    }
-	
+    streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
+	int opo = BASS_ErrorGetCode();
+
 	BASS_SAMPLE * bInfo;
 
 	int current_len = 0;
     while(1)
-    {
-        DWORD readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, 2048);
+    {	
+        readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, 2048);
+		int err = BASS_ErrorGetCode();
 
-        buffer.len = readLength;
-        buffer.buf = (CHAR*)streamDataBuffer;
+        buffer.len = 2048;
+        buffer.buf = streamDataBuffer;
 		current_len += 2048;
 
-        WSASend(socket, &buffer, 1, &SendBytes, 0, &ov, NULL);
+        err = WSASend(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
       
         ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     }

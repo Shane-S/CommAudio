@@ -50,12 +50,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Libraries\taglib-1.9.1\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>taglib%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>tag.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -83,13 +83,29 @@
     <ClInclude Include="..\sqlite3.h" />
     <ClInclude Include="..\sqlite3ext.h" />
     <ClInclude Include="ahm.h" />
+    <ClInclude Include="taglib\taglib.h" />
+    <ClInclude Include="taglib\tbytevector.h" />
+    <ClInclude Include="taglib\tbytevectorlist.h" />
+    <ClInclude Include="taglib\tbytevectorstream.h" />
+    <ClInclude Include="taglib\tdebug.h" />
+    <ClInclude Include="taglib\tdebuglistener.h" />
+    <ClInclude Include="taglib\tfile.h" />
+    <ClInclude Include="taglib\tfilestream.h" />
+    <ClInclude Include="taglib\tiostream.h" />
+    <ClInclude Include="taglib\tlist.h" />
+    <ClInclude Include="taglib\tmap.h" />
+    <ClInclude Include="taglib\tpropertymap.h" />
+    <ClInclude Include="taglib\trefcounter.h" />
+    <ClInclude Include="taglib\tstring.h" />
+    <ClInclude Include="taglib\tstringlist.h" />
+    <ClInclude Include="taglib\tutils.h" />
+    <ClInclude Include="taglib\unicode.h" />
+    <ClInclude Include="taglib\wavpackfile.h" />
+    <ClInclude Include="taglib\wavpackproperties.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\sqlite3.lib" />
     <Library Include="..\tag.lib" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\tag.exp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

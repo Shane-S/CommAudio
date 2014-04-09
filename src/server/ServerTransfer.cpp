@@ -22,6 +22,7 @@
 static DWORD	recvd	= 0;	// The number of bytes or packets received
 static HANDLE	destFile = 0;	// A file to store the transferred data (if specified by the user)
 LPFN_ACCEPTEX   AcceptPtr;
+
 /**
  * Initialises a TCP or UDP socket for use by the server.
  *
@@ -61,84 +62,31 @@ BOOL ServerInitSocket(LPTransferProps props)
  */
 DWORD WINAPI Serve(VOID *hwnd)
 {
-	BOOL			set		= TRUE;
-	DWORD			flags	= 0;
-	LPTransferProps props	= (LPTransferProps)GetWindowLongPtr((HWND)hwnd, GWLP_TRANSFERPROPS);
-	LPSOCKADDR_IN   client  = (LPSOCKADDR_IN)malloc(sizeof(SOCKADDR_IN));
-	DWORD			dwSleepRet;
+	DWORD           bytesRecvd;
+	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
+	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
+	WSAEVENT        hEvent      = CreateEvent(NULL, 0, 0, "AcceptExEvt");
+	LPTransferProps props		= (LPTransferProps)GetWindowLongPtr((HWND)hwnd, GWLP_TRANSFERPROPS);
+	LPSOCKADDR_IN   client		= (LPSOCKADDR_IN)malloc(sizeof(SOCKADDR_IN));
+	SOCKET			listenSock	= props->socket;
+	SOCKET			acceptSock  = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
+	GUID            acceptID    = WSAID_ACCEPTEX;
 
-	if (props->nSockType == SOCK_STREAM && !ListenTCP(props))
-	{
-		ServerCleanup(props);
-		return 1;
-	}
-	else if (props->nSockType == SOCK_DGRAM && !ListenUDP(props))
-	{
-		ServerCleanup(props);
-		return 2;
-	}
+	WSAIoctl(listenSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &acceptID, sizeof(acceptID), &AcceptPtr, sizeof(AcceptPtr), &bytesRecvd,
+		NULL, NULL);
 
-	while (props->dwTimeout)
-	{
-		dwSleepRet = SleepEx(INFINITE, TRUE);
-		if (dwSleepRet != WAIT_IO_COMPLETION)
-			break; // We've lost some packets; just exit the loop
-	}
+	memset(ovr, 0, sizeof(WSAOVERLAPPED));
+	ovr->hEvent = hEvent;
 
-	closesocket(props->socket);
+	listen(listenSock, 5);
+
+	OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
+	WSAWaitForMultipleEvents(1, &ovr->hEvent, FALSE, INFINITE, TRUE);
+	MessageBox(NULL, "Accepted client!", "ACCEPT THIS BITCH", MB_OK);
+	//closesocket(props->socket);
 
 	ServerCleanup(props);
 	return 0;
-}
-
-/**
- * Increments the number of packets received when a WSARecvFrom completes on a UDP socket.
- *
- * @param dwErrorCode					The error code (if any) set while the WSARecvFrom happened.
- * @param dwNumberOfBytesTransferred	The number of bytes received.
- * @param lpOverlapped					Pointer to an overlapped I/O (not used since this is a completion routine).
- * @param dwFlags						The flags set on the socket.
- */
-VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
-	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
-{
-	LPTransferProps props = (LPTransferProps)lpOverlapped;
-	DWORD flags = 0;
-
-	if (dwErrorCode != 0)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("UDP Recv Error"), TEXT("Error receiving UDP packet; error code %d"), dwErrorCode);
-		props->dwTimeout = 0;
-		return;
-	}
-	recvd += dwNumberOfBytesTransfered;	
-
-	WSARecvFrom(props->socket, &props->dataBuffer, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props, UDPRecvCompletion);
-}
-
-/**
-* Increments the number of bytes received when a WSARecv completes on a TCP socket.
-*
-* @param dwErrorCode					The error code (if any) set while the WSARecvFrom happened.
-* @param dwNumberOfBytesTransferred:	The number of bytes received.
-* @param lpOverlapped					Pointer to an overlapped I/O (not used since this is a completion routine).
-* @param dwFlags						The flags set on the socket.
- */
-VOID CALLBACK TCPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
-	LPOVERLAPPED lpOverlapped, DWORD dwFlags)
-{
-	LPTransferProps props	= (LPTransferProps)lpOverlapped;
-	DWORD			flags	= 0;
-
-	if (dwErrorCode != 0)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("TCP Recv Error"), TEXT("Error receiving TCP packet; error code %d"), dwErrorCode);
-		props->dwTimeout = 0;
-		return;
-	}
-
-	recvd += dwNumberOfBytesTransfered;
-	WSARecv(props->socket, &props->dataBuffer, 1, NULL, &flags, (LPOVERLAPPED)props, TCPRecvCompletion);
 }
 
 /**
@@ -155,53 +103,6 @@ VOID ServerCleanup(LPTransferProps props)
 }
 
 /**
- * Listens for a TCP connection on a listening socket and accepts connections.
- *
- * @param props Pointer to the TransferProps structure containing information about this transfer.
- * @return False if something went wrong during the connection, true otherwise.
- */
-BOOL ListenTCP(LPTransferProps props)
-{
-	SOCKET accept;
-	DWORD flags = 0, error = 0;
-	DWORD bytesRead;
-	GUID  accept_id = WSAID_ACCEPTEX;
-	DWORD out_buf;
-	char *buf = (char *)malloc(BUFSIZE);
-
-	if (listen(props->socket, 5) == SOCKET_ERROR)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("listen() Failed"), TEXT("listen() failed with socket error %d"), WSAGetLastError());
-		return FALSE;
-	}
-
-	WSAIoctl(props->socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &accept_id, sizeof(accept_id), &AcceptPtr, sizeof(AcceptPtr), &out_buf,
-		NULL, NULL);
-
-	/*if ((accept = WSAAccept(props->socket, NULL, NULL, NULL, NULL)) == SOCKET_ERROR)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("WSAAccept Failed"), TEXT("WSAAccept() failed with socket error %d"), WSAGetLastError());
-		return FALSE;
-	}*/
-
-	closesocket(props->socket); // close the listening socket
-	props->socket = accept;		// assign the new socket to props->socket
-
-	props->audioFile = CreateFile("C:\\Users\\Shane\\Music\\Zune\\Fleetwood Mac\\Rumours\\07 The Chain.mp3", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	ReadFile(props->audioFile, props->dataBuffer.buf, BUFSIZE, &bytesRead, NULL);
-	props->dataBuffer.len = bytesRead;
-	WSASend(props->socket, &props->dataBuffer, 1, NULL, 0, (LPOVERLAPPED)props, UnicastFileSend);
-
-	if (error && error != WSA_IO_PENDING)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecv Error"), TEXT("WSARecv encountered error %d"), error);
-		props->dwTimeout = 0;
-		return FALSE;
-	}
-	return TRUE;
-}
-
-/**
  * Increments the number of packets received when a WSARecvFrom completes on a UDP socket.
  *
  * @param props Pointer to the TransferProps structure containing details about this transfer.
@@ -209,7 +110,7 @@ BOOL ListenTCP(LPTransferProps props)
  */
 BOOL ListenUDP(LPTransferProps props)
 {
-	DWORD		flags = 0, error = 0;
+	DWORD flags = 0, error = 0;
 	props->dwTimeout = INFINITE;
 
 	WSARecvFrom(props->socket, &props->dataBuffer, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props,
@@ -250,7 +151,7 @@ INT OverlappedAccept(SOCKET listenSocket, SOCKET newSock, PVOID lpNameLen, DWORD
 	if (!AcceptPtr(listenSocket, newSock, lpNameLen, dwRecvDataLen, sizeof(sockaddr_in)+16, sizeof(sockaddr_in)+16,
 		lpdwBytesReceived, lpOverlapped) && ((error = WSAGetLastError()) != WSA_IO_PENDING))
 	{
-		TCHAR message[128];
+		TCHAR message[128] = { 0 };
 		_tcprintf_s(message, TEXT("%s, error number %d."), TEXT("Error accepting socket"), error);
 		LogError(TEXT("OverlappedAccept"), message);
 		return -1;

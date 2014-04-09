@@ -13,15 +13,14 @@ public:
 	int							maxSongs;
 	std::string					directory;
 
-	explicit AudioLibrary(std::string directory, std::string supportedTypes, int numTypes, int maxSongs);
-
+	AudioLibrary(std::string directory, std::string supportedTypes, int numTypes, int maxSongs);
+	std::vector<std::string> grabPlaylist();
 private:
 	bool		checkType(std::string type);
 	bool		checkName(const char * name);
 	void		retrieveDirectory();
 	std::string	getFileType(std::string file);
 	std::string	getCoverArt(std::string songDirectory);
-
 };
 
 #endif

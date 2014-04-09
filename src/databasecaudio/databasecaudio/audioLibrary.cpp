@@ -94,7 +94,7 @@ void AudioLibrary::retrieveDirectory()
 						{
 							SongData sData(string(albumDirectory), artDirectory, fileType);
 							this->numsongs++;
-							//printf("Reading data for song #%d\n", numsongs);
+							printf("Reading data for song #%d\n", numsongs);
 							this->songList.push_back(sData);	
 						}catch(const std::invalid_argument& e){
 							std::cout << "Invalid song name!" << std::endl;
@@ -204,10 +204,36 @@ string AudioLibrary::getCoverArt(string songDirectory)
  */
 bool AudioLibrary::checkType(string type)
 {
-	for(string sType : supportedTypes)
+	for(int i = 0; i < supportedTypes.size(); i++)
 	{
-		if(type == sType)
+		if(type == supportedTypes.at(i))
 			return TRUE;
 	}
 	return FALSE;
 }
+/**
+ * Takes the songlist and puts it in a format for easy data transfer.
+ *
+ * Returns a vector of strings, where each string is the song metadata of the song at the same point.
+ *
+ * Returns a vector of song metadata strings.
+ *
+ * @designer Ramzi Chennafi
+ * @author   Ramzi Chennafi
+ * @date     April 3rd, 2014
+ */
+std::vector<string> AudioLibrary::grabPlaylist()
+{
+	std::vector<string> plist;
+
+	for(int i = 0; i < numsongs; i++)
+	{
+		std::stringstream out;
+		out << "," << songList.at(i).name << "," << songList.at(i).album << "," << songList.at(i).artist << "," << songList.at(i).albumArt <<
+						"," << songList.at(i).length << "," << songList.at(i).bitrate;
+		plist.push_back(out.str());
+	}
+
+	return plist;
+}
+

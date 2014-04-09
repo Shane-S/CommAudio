@@ -23,9 +23,49 @@ SongData::SongData(string directory, string artDirectory, string fileType)
 	this->fileType = fileType;
 	this->artDirectory = artDirectory;
 	this->directory = directory;
+	this->albumArt = 1;
 	
 	setMetadata(fRef);
-	setProperties(fRef);
+	setProperties(fRef);	
+}
+/**
+ * Parses the metadata contained in @a metadata into a struct.
+ *
+ * Note that the function prints an error message and exit the program on failure.
+ *
+ * @param metadata The serialised metadata packet containing the metadata to be parsed.
+ * @param lengths  The length of each string in the metadata packet.
+ * @param art_size The size (in bytes) of the album art for this song.
+ *
+ * @return Pointer to a metadata struct containing metadata pulled from the packet.
+ *         Returns NULL on failure.
+ *
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @date     March 29th, 2014
+ */
+SongData::SongData(const char *metadata, const uint8_t strLens[NUM_METASTRS], const uint32_t artSize)
+{
+	int offset = 0;
+
+	if (!metadata)
+		throw "Metadata::Metadata: No metadata provided";
+
+	for (int i = 0; i < NUM_METASTRS; i++)
+	{
+		string temp(metadata + offset, strLens[i]);
+		metaString_.push_back(temp);
+		offset += strLens[i];
+	}
+
+	//memcpy(&track_, metadata + offset, sizeof(uint32_t));
+	//memcpy(&year_, metadata + offset + sizeof(uint32_t), sizeof(uint32_t));
+
+	/*albumArt_ = (uint8_t *)malloc(artSize);
+	if (!albumArt_)
+		throw "Metadata::Metadata: Couldn't allocate memory for albumArt_";*/
+
+	//memcpy(&albumArt_, metadata + offset, artSize);
 }
 /**
  * Retrieves the metadata of the provided FileRef and sets
@@ -39,12 +79,10 @@ SongData::SongData(string directory, string artDirectory, string fileType)
  */
 void SongData::setMetadata(TagLib::FileRef sRef)
 {
-	TagLib::Tag * mdata = sRef.tag();
-
-	setArtist(toString(mdata->artist()));
-	setAlbum(toString(mdata->album()));
-	setTitle(toString(mdata->title()));
-	this->year = mdata->year();
+	setArtist(toString(sRef.tag()->artist()));
+	setAlbum(toString(sRef.tag()->album()));
+	setTitle(toString(sRef.tag()->title()));
+	this->year = sRef.tag()->year();
 }
 /**
  * Retrieves the audio properties of the provided FileRef and sets

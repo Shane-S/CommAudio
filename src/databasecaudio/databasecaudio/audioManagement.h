@@ -1,0 +1,9 @@
+#include <Windows.h>
+#include <iostream>
+#include <fileref.h>
+#include <tag.h>
+#include <tpropertymap.h>
+#include <dirent.h>
+#include <memory>
+#include <string>
+#include <sstream>

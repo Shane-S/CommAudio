@@ -16,15 +16,15 @@
     <Filter Include="Header Files\Taglib">
       <UniqueIdentifier>{533eadb1-c9ed-4d54-a845-ddfd650dbae5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\sqlite">
-      <UniqueIdentifier>{3bfd424a-d434-4bdd-9ec3-bf8f164270aa}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="audio_library_management.cpp">
+    <ClCompile Include="audioLibrary.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SongData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -86,18 +86,17 @@
     <ClInclude Include="taglib\tmap.h">
       <Filter>Header Files\Taglib</Filter>
     </ClInclude>
-    <ClInclude Include="..\sqlite3ext.h">
-      <Filter>Header Files\sqlite</Filter>
-    </ClInclude>
-    <ClInclude Include="..\sqlite3.h">
-      <Filter>Header Files\sqlite</Filter>
-    </ClInclude>
     <ClInclude Include="ahm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SongData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="audioManagement.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\sqlite3.lib" />
     <Library Include="..\tag.lib" />
   </ItemGroup>
 </Project>

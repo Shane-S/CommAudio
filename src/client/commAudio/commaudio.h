@@ -14,11 +14,11 @@
 #include "ConnectionSettings.h"
 #include "bass.h"
 
-typedef struct AudioPlaybackData
+typedef struct connectionStruct
 {
-    char dataBuffer[2048];
-    DWORD *bytesReceived;
-} *PAUDIOPLAYBACKDATA;
+	SOCKET UDPSocket;
+	SOCKADDR_IN UDPSockAddr;
+} *PCONNECTIONSTRUCT, connectionStruct;
 
 class commAudio : public QMainWindow
 {
@@ -30,8 +30,6 @@ public:
 
     bool nativeEvent(const QByteArray &eventType, void *message, long *result);
     void addChatMessageToHistory(QString username, QString message);
-    void startRecording();
-    void sendRecording();
     void audioPlayback();
 
 private:

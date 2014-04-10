@@ -36,6 +36,8 @@ public:
     void sendPing();
 
     SOCKET getTCPSocket() {return serverTCPSocket;}
+    SOCKET getUDPSocket() {return serverUDPSocket;}
+    struct sockaddr_in getUDPSockAddr() {return serverUDPAddr;}
     void setHWND(HWND hwnd_) {hwnd = hwnd_;}
     void setConnectionSettings(ConnectionSettings connectionSettings_) { connectionSettings = connectionSettings_; }
 

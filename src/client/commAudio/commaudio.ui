@@ -201,6 +201,24 @@
        <normaloff>Resources/volume.png</normaloff>Resources/volume.png</iconset>
      </property>
     </widget>
+    <widget class="QCheckBox" name="checkBox_save_current_song">
+     <property name="geometry">
+      <rect>
+       <x>410</x>
+       <y>10</y>
+       <width>91</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Save this song</string>
+     </property>
+    </widget>
    </widget>
    <widget class="Line" name="line">
     <property name="geometry">

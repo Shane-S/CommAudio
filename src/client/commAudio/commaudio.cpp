@@ -5,17 +5,12 @@
 commAudio::commAudio(QWidget *parent)
     : QMainWindow(parent)
 {
-    int freq = 44100;
-    int device = -1;
     
     playerState = 0; //start player in paused state
     recording = false;
 
-    BASS_Init(device, freq, 0, 0, NULL);
-    BASS_RecordInit(device);
-
-    streamHandle = BASS_StreamCreate(freq, 2, 0, STREAMPROC_PUSH, 0);
-    micHandle = BASS_RecordStart(freq, 2, BASS_RECORD_PAUSE, NULL, NULL);
+    BASS_Init(-1, 44100, 0, 0, NULL);
+    BASS_RecordInit(-1);
 
     clientNetwork.setHWND((HWND)this->winId());
     ui.setupUi(this);
@@ -68,6 +63,28 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
     return false;
 }
 
+BOOL CALLBACK MyRecordProc(HRECORD handle, const void *buffer, DWORD length, void *user)
+{
+    DWORD SendBytes = 0;
+    DWORD BytesTransferred = 0;
+    WSABUF WSbuffer;
+	int err;
+	char * buf = (char*)buffer;
+    PCONNECTIONSTRUCT cStruct = (PCONNECTIONSTRUCT) user;
+
+	int pos = 0;
+	while(length > pos)
+	{
+		WSbuffer.len = 1024;
+		WSbuffer.buf = (char*)buf + pos;
+
+        err = WSASendTo(cStruct->UDPSocket , &WSbuffer, 1, &SendBytes, 0, (sockaddr*)&cStruct->UDPSockAddr , sizeof(cStruct->UDPSockAddr), NULL, NULL);
+
+		pos += 1024;
+	}
+    return true; // continue recording
+}
+
 void commAudio::newConnectDialog()
 {
     playerState = 0; //start player in paused state
@@ -83,6 +100,14 @@ void commAudio::newConnectDialog()
     clientNetwork.connectToTCPServer();
     clientNetwork.initUDPClient();
     //clientNetwork.sendPing();
+
+    streamHandle = BASS_StreamCreate(44100, 2, 0, STREAMPROC_PUSH, 0);
+    
+    PCONNECTIONSTRUCT cStruct = (PCONNECTIONSTRUCT) malloc(sizeof(PCONNECTIONSTRUCT));
+
+    cStruct->UDPSocket = clientNetwork.getUDPSocket();
+    cStruct->UDPSockAddr = clientNetwork.getUDPSockAddr();
+    micHandle = BASS_RecordStart(44100, 2, BASS_RECORD_PAUSE, MyRecordProc, (void*)cStruct);
 }
 
 void commAudio::newAudioUploadDialog()
@@ -132,7 +157,8 @@ void commAudio::audioPlayback()
         BASS_ChannelPlay(streamHandle, FALSE);
     }
 
-    BASS_ChannelPause(streamHandle);
+    int err = BASS_ChannelPause(streamHandle);
+    err = BASS_ErrorGetCode();
 }
 
 void commAudio::sendMessageButtonClick()
@@ -155,34 +181,14 @@ void commAudio::pushToTalkButtonPressed()
 {
     recording = true;
 
-    std::thread record(&commAudio::startRecording, this);
-    std::thread sendMicRecording(&commAudio::sendRecording, this);
-    record.detach();
-    sendMicRecording.detach();
+    BASS_ChannelPlay(micHandle, true);
 }
 
 void commAudio::pushToTalkButtonReleased()
 {
     recording = false;
-}
-
-void commAudio::startRecording()
-{
-    int err;
-    while(recording == true)
-    {
-        BASS_ChannelPlay(micHandle, false);
-    }
 
     BASS_ChannelPause(micHandle);
-}
-
-void commAudio::sendRecording()
-{
-    while(recording == true)
-    {
-        clientNetwork.sendMicData(micHandle);
-    }
 }
 
 commAudio::~commAudio()

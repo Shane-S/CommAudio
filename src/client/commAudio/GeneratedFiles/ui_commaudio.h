@@ -13,6 +13,7 @@
 #include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QButtonGroup>
+#include <QtWidgets/QCheckBox>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QGraphicsView>
 #include <QtWidgets/QGroupBox>
@@ -62,6 +63,7 @@ public:
     QPushButton *player_next_btn;
     QPushButton *player_previous_btn;
     QPushButton *pushButton;
+    QCheckBox *checkBox_save_current_song;
     QFrame *line;
     QLabel *label;
     QLabel *label_2;
@@ -185,6 +187,12 @@ public:
         QIcon icon3;
         icon3.addFile(QStringLiteral("Resources/volume.png"), QSize(), QIcon::Normal, QIcon::Off);
         pushButton->setIcon(icon3);
+        checkBox_save_current_song = new QCheckBox(groupBox);
+        checkBox_save_current_song->setObjectName(QStringLiteral("checkBox_save_current_song"));
+        checkBox_save_current_song->setGeometry(QRect(410, 10, 91, 20));
+        QFont font2;
+        font2.setPointSize(8);
+        checkBox_save_current_song->setFont(font2);
         line = new QFrame(centralWidget);
         line->setObjectName(QStringLiteral("line"));
         line->setGeometry(QRect(530, 10, 20, 511));
@@ -193,13 +201,13 @@ public:
         label = new QLabel(centralWidget);
         label->setObjectName(QStringLiteral("label"));
         label->setGeometry(QRect(10, 10, 131, 31));
-        QFont font2;
-        font2.setPointSize(14);
-        label->setFont(font2);
+        QFont font3;
+        font3.setPointSize(14);
+        label->setFont(font3);
         label_2 = new QLabel(centralWidget);
         label_2->setObjectName(QStringLiteral("label_2"));
         label_2->setGeometry(QRect(560, 10, 131, 31));
-        label_2->setFont(font2);
+        label_2->setFont(font3);
         chat_history = new QTextEdit(centralWidget);
         chat_history->setObjectName(QStringLiteral("chat_history"));
         chat_history->setEnabled(true);
@@ -239,7 +247,7 @@ public:
         label_3 = new QLabel(centralWidget);
         label_3->setObjectName(QStringLiteral("label_3"));
         label_3->setGeometry(QRect(10, 230, 131, 31));
-        label_3->setFont(font2);
+        label_3->setFont(font3);
         commAudioClass->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(commAudioClass);
         menuBar->setObjectName(QStringLiteral("menuBar"));
@@ -329,6 +337,7 @@ public:
         player_next_btn->setText(QString());
         player_previous_btn->setText(QString());
         pushButton->setText(QString());
+        checkBox_save_current_song->setText(QApplication::translate("commAudioClass", "Save this song", 0));
         label->setText(QApplication::translate("commAudioClass", "Song List:", 0));
         label_2->setText(QApplication::translate("commAudioClass", "Chat:", 0));
         send_chat_message_btn->setText(QApplication::translate("commAudioClass", "Send Message", 0));

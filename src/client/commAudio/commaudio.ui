@@ -253,7 +253,7 @@
    </widget>
    <widget class="QTextEdit" name="chat_history">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -265,6 +265,9 @@
     </property>
     <property name="autoFillBackground">
      <bool>false</bool>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
     </property>
    </widget>
    <widget class="QPlainTextEdit" name="chat_message">
@@ -582,10 +585,61 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>send_chat_message_btn</sender>
+   <signal>clicked()</signal>
+   <receiver>commAudioClass</receiver>
+   <slot>sendMessageButtonClick()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>660</x>
+     <y>498</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>385</x>
+     <y>294</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>push_to_talk_btn</sender>
+   <signal>pressed()</signal>
+   <receiver>commAudioClass</receiver>
+   <slot>pushToTalkButtonPressed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>660</x>
+     <y>538</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>385</x>
+     <y>294</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>push_to_talk_btn</sender>
+   <signal>released()</signal>
+   <receiver>commAudioClass</receiver>
+   <slot>pushToTalkButtonReleased()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>660</x>
+     <y>538</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>385</x>
+     <y>294</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>newConnectDialog()</slot>
   <slot>newAudioUploadDialog()</slot>
   <slot>playPauseButtonClick()</slot>
+  <slot>sendMessageButtonClick()</slot>
+  <slot>pushToTalkButtonPressed()</slot>
+  <slot>pushToTalkButtonReleased()</slot>
  </slots>
 </ui>

@@ -8,11 +8,15 @@ commAudio::commAudio(QWidget *parent)
     int freq = 44100;
     int device = -1;
     
+    playerState = 0; //start player in paused state
+
     BASS_Init(device, freq, 0, 0, NULL);
+    BASS_RecordInit(device);
+
     streamHandle = BASS_StreamCreate(freq, 2, 0, STREAMPROC_PUSH, 0);
+    micHandle = BASS_RecordStart(freq, 2, BASS_RECORD_PAUSE, NULL, NULL);
 
     clientNetwork.setHWND((HWND)this->winId());
-
     ui.setupUi(this);
 }
 
@@ -29,23 +33,29 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
     {
         switch(WSAGETSELECTEVENT(recvMessage->lParam))
         {
-        case FD_READ:
-            flags = 0;
-            buffer.buf = (CHAR*)dataBuffer;
-            buffer.len = 2048;
-            int err = WSARecv(clientNetwork.getTCPSocket(), &buffer, 1, &bytesReceived, &flags, NULL, NULL);
-            
-            if(bytesReceived > 0)
+            case FD_READ:
             {
-                /**if(playerState == 0)
+                flags = 0;
+                buffer.buf = (CHAR*)dataBuffer;
+                buffer.len = 2048;
+                int err = WSARecv(clientNetwork.getTCPSocket(), &buffer, 1, &bytesReceived, &flags, NULL, NULL);
+            
+                if(bytesReceived > 0)
                 {
-                    playerState = 1;
-                }*/
-                err = BASS_StreamPutData(streamHandle, dataBuffer, bytesReceived);
-                err = BASS_ErrorGetCode();
-            }
+                    /**if(playerState == 0)
+                    {
+                        playerState = 1;
+                    }*/
+                    err = BASS_StreamPutData(streamHandle, dataBuffer, bytesReceived);
+                    err = BASS_ErrorGetCode();
+                }
 
-            break;
+                break;
+            }
+            case FD_CLOSE:
+            {
+                break;
+            }
         }
 
         return true;
@@ -111,7 +121,37 @@ void commAudio::playPauseButtonClick()
     }
 }
 
+void commAudio::sendMessageButtonClick()
+{
+    if(!(ui.chat_message->toPlainText().isEmpty()))
+    {
+        addChatMessageToHistory("You", ui.chat_message->toPlainText());
+        ui.chat_message->clear();
+    }
+}
+
+void commAudio::addChatMessageToHistory(QString username, QString message)
+{
+    //QString::fromStdString(connectionSettings.getUsername())
+    QString chatMessage = username + ": " + message + "\n";
+    ui.chat_history->append(chatMessage);
+}
+
+void commAudio::pushToTalkButtonPressed()
+{
+    BASS_ChannelPlay(micHandle, false);
+
+    BASS_ChannelGetData(micHandle, NULL, BASS_DATA_AVAILABLE);
+}
+
+void commAudio::pushToTalkButtonReleased()
+{
+    BASS_ChannelPause(micHandle);
+}
+
 commAudio::~commAudio()
 {
     BASS_Free();
+    BASS_RecordFree();
+    clientNetwork.terminateWinSock();
 }

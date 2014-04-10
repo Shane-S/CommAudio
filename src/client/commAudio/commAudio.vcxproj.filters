@@ -53,9 +53,6 @@
     <ClCompile Include="ClientNetwork.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="QtHelpers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ConnectDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -110,9 +107,6 @@
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_upload_audio_dialog.h">
       <Filter>Generated Files</Filter>
-    </ClInclude>
-    <ClInclude Include="QtHelpers.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ConnectionSettings.h">
       <Filter>Header Files</Filter>

@@ -191,21 +191,21 @@ void ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
     DWORD BytesTransferred = 0;
     WSABUF buffer;
 
-    //case string to void*:: void *vp = static_cast<void*>(string);
-    std::string *fp = static_cast<std::string*>(data);
-    std::string filename = *fp;
-
     WSAOVERLAPPED ov;
     ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     
     if(isFile) //not streaming from memory
     {
+        //cast string to void*:: void *vp = static_cast<void*>(string);
+        std::string *fp = static_cast<std::string*>(data);
+        std::string filename = *fp;
         streamBuffer = BASS_StreamCreateFile(FALSE, filename.c_str(), 0, 0, BASS_STREAM_DECODE);
     }
     else //streaming from memory
     {
         int length = sizeof(data);
         streamBuffer = BASS_StreamCreateFile(TRUE, (void *)data, 0, sizeof(data), 0);
+        //streamBuffer = BASS_StreamCreateFile(TRUE, NULL, 0, sizeof(data), 0);
     }
 
     while(BASS_ChannelIsActive(streamBuffer))

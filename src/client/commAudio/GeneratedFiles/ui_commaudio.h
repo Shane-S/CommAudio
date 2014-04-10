@@ -202,9 +202,10 @@ public:
         label_2->setFont(font2);
         chat_history = new QTextEdit(centralWidget);
         chat_history->setObjectName(QStringLiteral("chat_history"));
-        chat_history->setEnabled(false);
+        chat_history->setEnabled(true);
         chat_history->setGeometry(QRect(560, 50, 201, 301));
         chat_history->setAutoFillBackground(false);
+        chat_history->setReadOnly(true);
         chat_message = new QPlainTextEdit(centralWidget);
         chat_message->setObjectName(QStringLiteral("chat_message"));
         chat_message->setGeometry(QRect(560, 360, 201, 81));
@@ -286,6 +287,9 @@ public:
         QObject::connect(actionUpload_a_Song, SIGNAL(triggered()), commAudioClass, SLOT(newAudioUploadDialog()));
         QObject::connect(actionExit, SIGNAL(triggered()), commAudioClass, SLOT(close()));
         QObject::connect(player_play_pause_toggle_btn, SIGNAL(clicked()), commAudioClass, SLOT(playPauseButtonClick()));
+        QObject::connect(send_chat_message_btn, SIGNAL(clicked()), commAudioClass, SLOT(sendMessageButtonClick()));
+        QObject::connect(push_to_talk_btn, SIGNAL(pressed()), commAudioClass, SLOT(pushToTalkButtonPressed()));
+        QObject::connect(push_to_talk_btn, SIGNAL(released()), commAudioClass, SLOT(pushToTalkButtonReleased()));
 
         QMetaObject::connectSlotsByName(commAudioClass);
     } // setupUi

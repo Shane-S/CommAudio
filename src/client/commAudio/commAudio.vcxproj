@@ -180,7 +180,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="QtHelpers.cpp" />
     <ClCompile Include="UploadAudioDialog.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -266,7 +265,6 @@
     <ClInclude Include="GeneratedFiles\ui_commaudio.h" />
     <ClInclude Include="GeneratedFiles\ui_connect_dialog.h" />
     <ClInclude Include="GeneratedFiles\ui_upload_audio_dialog.h" />
-    <ClInclude Include="QtHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="commaudio.qrc">

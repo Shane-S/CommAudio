@@ -22,20 +22,24 @@ public:
     ~commAudio();
 
     bool nativeEvent(const QByteArray &eventType, void *message, long *result);
+    void addChatMessageToHistory(QString username, QString message);
 
 private:
-    Ui::commAudioClass ui;
-    ClientNetwork clientNetwork;
-    ConnectionSettings connectionSettings;
-    int playerState; //0 = paused; 1 = playing
-    HSTREAM streamHandle;
-    HSTREAM streamBuffer;
-    char dataBuffer[1024];
+    Ui::commAudioClass  ui;
+    ClientNetwork       clientNetwork;
+    ConnectionSettings  connectionSettings;
+    int                 playerState; //0 = paused; 1 = playing
+    HSTREAM             streamHandle;
+    HRECORD             micHandle;
+    char                dataBuffer[1024];
 
     private slots:
         void newConnectDialog();
         void newAudioUploadDialog();
         void playPauseButtonClick();
+        void sendMessageButtonClick();
+        void pushToTalkButtonPressed();
+        void pushToTalkButtonReleased();
 };
 
 #endif // COMMAUDIO_H

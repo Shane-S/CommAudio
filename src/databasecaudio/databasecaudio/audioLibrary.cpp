@@ -3,6 +3,29 @@ using std::string;
 using std::list;
 using std::shared_ptr;
 
+AudioLibrary::AudioLibrary(string directory, string supportedTypes, int numTypes)
+{
+	if (numTypes == 0)
+	{
+		std::cerr << "At least one type must be provided in the format \"wav, mp3, ...\"" << std::endl;
+	}
+
+	this->numsongs = 0;
+	this->maxSongs = 10000;
+	this->playingSong = 0;
+
+	for (int i = 0; i < numTypes; i++)
+	{
+		if (supportedTypes.at(i) == ',')
+		{
+			string type = supportedTypes.substr(i + 1, 3);
+			this->supportedTypes.push_back(type);
+		}
+	}
+
+	this->directory = directory;
+}
+
 /**
 * Constructor for the audio library. Sets the supported types
 * and the song library from the passed in directory.

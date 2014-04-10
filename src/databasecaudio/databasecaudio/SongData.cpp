@@ -110,14 +110,16 @@ void SongData::setAlbumArt()
 	artFile.open(artDirectory, ios::binary);
 	if(artFile.is_open())
 	{
-		std::stringstream string_out;
+		/*std::stringstream string_out;
 		string_out << artFile;
-		metaStrings_.push_back(string_out.str());
+		metaStrings_.push_back(string_out.str());*/
 	}
 	else
 	{
 		fprintf(stderr, "Failed to open album art.\n");
 	}
+
+	artFile.close();
 }
 /**
 * Sets the artist variable of the object.

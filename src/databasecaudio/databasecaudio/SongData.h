@@ -3,39 +3,41 @@
 
 #include "audioManagement.h"
 
+#define TITLE		 1
+#define ARTIST		 2
+#define ALBUM		 3
+#define YEAR		 4
+#define BRATE		 5
+#define SRATE		 6
+#define LENGTH		 7
+#define AART		 8
 #define NUM_METASTRS 9
 
 class SongData
 {
 public:
-	std::string name;
-	std::string album;
-	std::string artist;
 	std::string directory;
 	std::string fileType;
 	std::string artDirectory;
-	int year;
-	int bitrate;
-	int length;
-	int channels;
-	int sampleRate;
-	int albumArt;
 
 	SongData(std::string directory, std::string artDirectory, std::string fileType);
-	SongData(const char *metadata, const uint8_t strLens[NUM_METASTRS], const uint32_t artSize);
-	std::string toString(TagLib::String str);
+	SongData(const char * metadata, const uint32_t strLens[NUM_METASTRS]);
+	template<typename T>
+	std::string toString(T str);
+	std::string getData(int data) const;
+	std::list<std::shared_ptr<WSABUF>> serialize() const;
 
 private:
 	std::shared_ptr<WSABUF>  makeSizePacket(uint32_t *dataPktSize) const;
 	std::shared_ptr<WSABUF>  makeDataPacket(uint32_t dataPktSize) const;
-	std::vector<std::string> metaString_;
+	std::vector<std::string> metaStrings_;
 
 	void setMetadata(TagLib::FileRef sRef);
 	void setProperties(TagLib::FileRef sRef);
 	void setArtist(std::string artist);
 	void setAlbum(std::string album);
 	void setTitle(std::string title);
-	void setYear(int year);
+	void setYear(std::string year);
 
 };
 

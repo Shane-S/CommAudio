@@ -1,5 +1,6 @@
 #include "ahm.h"
 #include "bass.h"
+void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket);
 void sendAudioData(const char *data, bool isTCP, bool isFile, SOCKET socket);
 using namespace std;
 #define sRate 44100
@@ -10,13 +11,11 @@ int main(void)
 {
 	cout << "Reading library in.." << endl;
 	
-	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\RazLT\\Music\\"), string(",mp3,"), 1, 10)); 
+	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\RazLT\\Music\\"), string(",mp3,"), 1, 100)); 
 	
 	for(int i = 0; i < lib->numsongs; i++)
 	{
-		cout << "Title: " << lib->songList.at(i).name << " | Artist: " <<  lib->songList.at(i).artist << " | Album: " << lib->songList.at(i).album << endl;
-		cout << "Bitrate: " << lib->songList.at(i).bitrate << " | Channels: " << lib->songList.at(i).channels << " | SampleRate: " << lib->songList.at(i).sampleRate << endl;
-		cout << "Length: " << lib->songList.at(i).length << endl;
+		
 	}
 	BASS_Init(-1, 44100, 0,0,0);
 	int	n, bytes_to_read;
@@ -93,7 +92,7 @@ int main(void)
 		
             while(1)
             {
-				const char * dir = lib->songList.at(8).directory.c_str();
+				const char * dir = lib->songList.at(75).directory.c_str();
                 sendAudioData(dir, true, true, new_sd);
             }
 
@@ -159,8 +158,42 @@ void sendAudioData(const char * filename, bool isTCP, bool isFile, SOCKET socket
         buffer.buf = streamDataBuffer;
 		current_len += 2048;
 
-        err = WSASend(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
+        err = WSASendTo(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
       
         ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     }
+}
+
+void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket)
+{
+	char streamDataBuffer[2048];
+	HSTREAM streamBuffer;
+	DWORD readLength = 0;
+	DWORD SendBytes = 0;
+	DWORD BytesTransferred = 0;
+	WSABUF buffer;
+
+	WSAOVERLAPPED ov;
+	ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+
+	streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
+	streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
+	int opo = BASS_ErrorGetCode();
+
+	BASS_SAMPLE * bInfo;
+
+	int current_len = 0;
+	while (1)
+	{
+		readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, 2048);
+		int err = BASS_ErrorGetCode();
+
+		buffer.len = 2048;
+		buffer.buf = streamDataBuffer;
+		current_len += 2048;
+
+		err = WSASendTo(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
+
+		ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+	}
 }

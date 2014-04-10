@@ -20,6 +20,7 @@ public:
 private:
 	int			sentSongs;
 
+	int			grabSongs(const char * albumDirectory, std::string artDirectory, struct dirent * songEnt);
 	bool		checkType(std::string type);
 	bool		checkName(const char * name);
 	void		retrieveDirectory();

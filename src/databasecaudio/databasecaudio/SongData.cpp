@@ -26,6 +26,7 @@ SongData::SongData(string directory, string artDirectory, string fileType)
 
 	setMetadata(fRef);
 	setProperties(fRef);
+	setAlbumArt();
 }
 /**
 * Parses the metadata contained in @a metadata into a struct.
@@ -92,6 +93,31 @@ void SongData::setProperties(TagLib::FileRef sRef)
 	metaStrings_.push_back(toString(aProps->sampleRate()));
 	metaStrings_.push_back(toString(aProps->length()));
 	metaStrings_.push_back(string("0"));
+}
+/**
+* Retrieves the album art for the song based on its directory.
+*
+* Will print an error message if the art cannot be opened.
+*
+* @designer Ramzi Chennafi
+* @author   Ramzi Chennafi
+* @date     April 3rd, 2014
+*/
+void SongData::setAlbumArt()
+{
+	std::ofstream artFile;
+
+	artFile.open(artDirectory, ios::binary);
+	if(artFile.is_open())
+	{
+		std::stringstream string_out;
+		string_out << artFile;
+		metaStrings_.push_back(string_out.str());
+	}
+	else
+	{
+		fprintf(stderr, "Failed to open album art.\n");
+	}
 }
 /**
 * Sets the artist variable of the object.
@@ -202,10 +228,10 @@ string SongData::toString(T str)
 */
 list<shared_ptr<WSABUF>> SongData::serialize() const
 {
-	uint32_t           dataPktSize; // Size of the actual data packet
+	uint32_t           dataPktSize = 0; // Size of the actual data packet
 	shared_ptr<WSABUF> wsaSize = makeSizePacket(&dataPktSize);
 	shared_ptr<WSABUF> wsaData = makeDataPacket(dataPktSize);
-	list<shared_ptr<WSABUF> > lst;
+	list<shared_ptr<WSABUF>> lst;
 
 	lst.push_back(wsaSize);
 	lst.push_back(wsaData);

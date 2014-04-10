@@ -17,7 +17,7 @@ int main(void)
 	{
 		cout << "Song Name: " <<  s.getData(TITLE) << endl;
 	}
-
+	std::list<std::shared_ptr<WSABUF>> plist = lib->grabPlaylist();
 	BASS_Init(-1, 44100, 0,0,0);
 	int	n, bytes_to_read;
     int	client_len, port = SERVER_TCP_PORT, err;

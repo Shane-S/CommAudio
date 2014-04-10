@@ -11,7 +11,7 @@
 #define SRATE		 5
 #define LENGTH		 6
 #define AART		 7
-#define NUM_METASTRS 9
+#define NUM_METASTRS 8
 
 class SongData
 {
@@ -28,12 +28,13 @@ public:
 	std::list<std::shared_ptr<WSABUF>> serialize() const;
 
 private:
-	std::shared_ptr<WSABUF>  makeSizePacket(uint32_t *dataPktSize) const;
-	std::shared_ptr<WSABUF>  makeDataPacket(uint32_t dataPktSize) const;
 	std::vector<std::string> metaStrings_;
 
+	std::shared_ptr<WSABUF>  makeSizePacket(uint32_t *dataPktSize) const;
+	std::shared_ptr<WSABUF>  makeDataPacket(uint32_t dataPktSize) const;
 	void setMetadata(TagLib::FileRef sRef);
 	void setProperties(TagLib::FileRef sRef);
+	void setAlbumArt();
 	void setArtist(std::string artist);
 	void setAlbum(std::string album);
 	void setTitle(std::string title);

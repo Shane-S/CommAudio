@@ -57,7 +57,6 @@ void AudioLibrary::retrieveDirectory()
 {
 	DIR *dir, *songDir;
 	struct dirent *ent, *songEnt;
-	string fileType;
 	string artDirectory;
 	char albumDirectory[500] = "";
 
@@ -80,32 +79,13 @@ void AudioLibrary::retrieveDirectory()
 			{
 				while ((songEnt = readdir(songDir)) != NULL)
 				{
-					if (numsongs == maxSongs)
-						break;
-
-					if (!checkName(songEnt->d_name))
+					int err = grabSongs(albumDirectory, artDirectory, songEnt);
+					
+					if(err == -2) // song is invalid
 						continue;
 
-					fileType = getFileType(string(songEnt->d_name));
-					if (checkType(fileType))
-					{
-						char temp[200];
-						memcpy(temp, albumDirectory, 200);
-						strcat_s(albumDirectory, "\\");
-						strcat_s(albumDirectory, songEnt->d_name);
-						try
-						{
-							SongData sData(string(albumDirectory), artDirectory, fileType);
-							this->numsongs++;
-							printf("Reading data for song #%d\n", numsongs);
-							this->songList.push_back(sData);
-						}
-						catch (const std::invalid_argument& e){
-							std::cout << "Invalid song name!" << std::endl;
-							continue;
-						}
-						memcpy(albumDirectory, temp, 200);
-					}
+					if(err == -1) // song library full
+						break;
 				}
 				closedir(songDir);
 			}
@@ -115,6 +95,50 @@ void AudioLibrary::retrieveDirectory()
 		}
 		closedir(dir);
 	}
+}
+/**
+* Checks a directory for a song. Creates a new SongData object and adds it to the library
+* if the song has a valid name. An exception is thrown and caught otherwise.
+* 
+* @param[in]	albumDirectory	the directory to be searched for songs in.
+* @param[in]	artDirectory	the album art directory to be passed to song data.
+* @param[in]	songEnt			structure containing the name of the 
+* @return		int				-2 signals the directory had an invalid song, -1 signals that the library is full.
+*
+* @designer Ramzi Chennafi
+* @author   Ramzi Chennafi
+* @date     April 3rd, 2014
+*/
+int AudioLibrary::grabSongs(const char * albumDirectory, string artDirectory, struct dirent * songEnt)
+{
+	string fileType;
+	char directory[500];
+	memcpy(directory, albumDirectory, 500);
+
+	if (numsongs == maxSongs)
+		return -1;
+
+	if (!checkName(songEnt->d_name))
+		return -2;
+
+	fileType = getFileType(string(songEnt->d_name));
+	if (checkType(fileType))
+	{
+		strcat_s(directory, "\\");
+		strcat_s(directory, songEnt->d_name);
+		try
+		{
+			SongData sData(string(directory), artDirectory, fileType);
+			this->numsongs++;
+			this->songList.push_back(sData);
+		}
+		catch (const std::invalid_argument& e){
+			std::cout << "Invalid song name!" << std::endl;
+			return -2;
+		}
+	}
+
+	return 0;
 }
 /**
 * Checks for an invalid directory name.
@@ -186,7 +210,7 @@ string AudioLibrary::getCoverArt(string songDirectory)
 	{
 		while ((ent = readdir(dir)) != NULL)
 		{
-			if ((strcmp(ent->d_name, "cover.jpg") == 0) || (strcmp(ent->d_name, "cover.png") == 0))
+			if ((strcmp(ent->d_name, "cover.jpg") == 0) || (strcmp(ent->d_name, "cover.png") == 0) || (strcmp(ent->d_name, "cover.gif") == 0))
 			{
 				return songDirectory + "\\" + string(ent->d_name);
 			}

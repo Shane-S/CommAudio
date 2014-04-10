@@ -168,19 +168,20 @@ void commAudio::pushToTalkButtonReleased()
 
 void commAudio::startRecording()
 {
-    while(recording)
+    int err;
+    while(recording == true)
     {
-        BASS_ChannelPlay(this->micHandle, false);
+        BASS_ChannelPlay(micHandle, false);
     }
 
-    BASS_ChannelPause(this->micHandle);
+    BASS_ChannelPause(micHandle);
 }
 
 void commAudio::sendRecording()
 {
-    while(recording)
+    while(recording == true)
     {
-        clientNetwork.sendMicData(this->micHandle);
+        clientNetwork.sendMicData(micHandle);
     }
 }
 

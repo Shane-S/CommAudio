@@ -248,7 +248,7 @@ void ClientNetwork::sendMicData(HRECORD micHandle)
         buffer.buf = streamDataBuffer;
 
         //UDP
-        WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), &ov, 0);
+        int err = WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), &ov, 0);
 
         ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     }

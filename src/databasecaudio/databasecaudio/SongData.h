@@ -3,14 +3,14 @@
 
 #include "audioManagement.h"
 
-#define TITLE		 1
-#define ARTIST		 2
-#define ALBUM		 3
-#define YEAR		 4
-#define BRATE		 5
-#define SRATE		 6
-#define LENGTH		 7
-#define AART		 8
+#define TITLE		 0
+#define ARTIST		 1
+#define ALBUM		 2
+#define YEAR		 3
+#define BRATE		 4
+#define SRATE		 5
+#define LENGTH		 6
+#define AART		 7
 #define NUM_METASTRS 9
 
 class SongData

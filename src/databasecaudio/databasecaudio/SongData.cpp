@@ -20,7 +20,6 @@ SongData::SongData(string directory, string artDirectory, string fileType)
 		throw std::invalid_argument("Recieved invalid directory");
 	}
 
-	metaStrings_.resize(8);
 	this->fileType = fileType;
 	this->artDirectory = artDirectory;
 	this->directory = directory;
@@ -289,5 +288,5 @@ string SongData::getData(int data) const
 	if (data >= NUM_METASTRS)
 		throw "Metadata::getMetadata: Index out of range";
 
-	return metaStrings_[data];
+	return metaStrings_.at(data);
 }

@@ -1,7 +1,7 @@
 #include "ahm.h"
 #include "bass.h"
 void sendAudioData(const char *data, bool isTCP, bool isFile, SOCKET socket);
-using namespace std;
+using std::cout; using std::endl; using std::string;
 #define sRate 44100
 #define SERVER_TCP_PORT 7000
 #define BUFSIZE         2048
@@ -10,12 +10,14 @@ int main(void)
 {
 	cout << "Reading library in.." << endl;
 	
-	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\RazLT\\Music\\"), string(",mp3,"), 1, 100)); 
+	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\Raz\\Music\\"), string(",mp3,"), 1, 100)); 
 	
-	for(int i = 0; i < lib->numsongs; i++)
+	cout << "Read " << lib->numsongs << " songs into the library." << endl;
+	for(auto s : lib->songList)
 	{
-		
+		cout << "Song Name: " <<  s.getData(TITLE) << endl;
 	}
+
 	BASS_Init(-1, 44100, 0,0,0);
 	int	n, bytes_to_read;
     int	client_len, port = SERVER_TCP_PORT, err;
@@ -104,7 +106,7 @@ int main(void)
 	WSACleanup();
 	cout << "Please press any key to exit the program ..." << endl;
 	fprintf(stderr, "DONE"); 
-	cin.get();
+	std::cin.get();
 
 	return 0;
 }

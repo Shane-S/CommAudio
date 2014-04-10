@@ -1,24 +1,112 @@
 #include "ahm.h"
 #include "bass.h"
-void sendAudioData(const char *data, bool isTCP, bool isFile, SOCKET socket);
-using std::cout; using std::endl; using std::string;
+#include "Ws2tcpip.h"
+
 #define sRate 44100
 #define SERVER_TCP_PORT 7000
 #define BUFSIZE         2048
+#define TIMECAST_ADDR   "234.5.6.7"
+#define TIMECAST_PORT   8910
+#define BUFSIZE     1024
+#define MAXADDRSTR  16
+
+int testMulticastServer(const char * dir);
+void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket, SOCKADDR_IN * toAddr);
+void sendAudioData(const char *data, bool isTCP, bool isFile, SOCKET socket);
+void tcpTestServer(const char * dir);
+using std::cout; using std::endl; using std::string;
+
+char achMCAddr[MAXADDRSTR] = TIMECAST_ADDR;
+u_short nPort              = TIMECAST_PORT;
 
 int main(void)
 {
 	cout << "Reading library in.." << endl;
 	
-	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\Raz\\Music\\"), string(",mp3,"), 1, 100)); 
+	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\Raz\\Music\\"), string(",mp3,"), 1, 150)); 
 	
 	cout << "Read " << lib->numsongs << " songs into the library." << endl;
 	for(auto s : lib->songList)
 	{
 		cout << "Song Name: " <<  s.getData(TITLE) << endl;
 	}
-	std::list<std::shared_ptr<WSABUF>> plist = lib->grabPlaylist();
+	//std::list<std::shared_ptr<WSABUF>> plist = lib->grabPlaylist();
 	BASS_Init(-1, 44100, 0,0,0);
+	const char * dir =  lib->songList[123].directory.c_str();
+	testMulticastServer(dir);
+	//tcpTestServer(dir);
+
+	cout << "Please press any key to exit the program ..." << endl;
+	fprintf(stderr, "DONE"); 
+	std::cin.get();
+
+	return 0;
+}
+
+/* MULTICAST TESTING SERVER */
+int testMulticastServer(const char * dir) 
+{
+	int nRet, i;
+	BOOL  fFlag;
+	SOCKADDR_IN stLclAddr, stDstAddr;
+	struct ip_mreq stMreq;        /* Multicast interface structure */
+	SOCKET hSocket;
+	WSADATA stWSAData;
+	WSABUF buffer;
+
+	nRet = WSAStartup(0x0202, &stWSAData);
+	if (nRet) {
+		printf ("WSAStartup failed: %d\r\n", nRet);
+		exit (1);
+	}
+
+	hSocket = socket(AF_INET, SOCK_DGRAM, 0);
+	if (hSocket == INVALID_SOCKET) {
+		printf ("socket() failed, Err: %d\n", WSAGetLastError());
+		exit(1);
+	}
+
+	/* Bind the socket */
+	stLclAddr.sin_family      = AF_INET; 
+	stLclAddr.sin_addr.s_addr = htonl(INADDR_ANY); /* any interface */
+	stLclAddr.sin_port        = 0;                 /* any port */
+	nRet = bind(hSocket, (struct sockaddr*) &stLclAddr, sizeof(stLclAddr));
+	if (nRet == SOCKET_ERROR) {
+		printf ("bind() port failed %s", WSAGetLastError());
+	}
+
+	/* Join the multicast group
+	* 
+	* NOTE: According to RFC 1112, a sender does not need to join the 
+	*  group, however Microsoft requires a socket to join a group in 
+	*  order to use setsockopt() IP_MULTICAST_TTL (or fails with error
+	*  WSAEINVAL).
+	*/
+	stMreq.imr_multiaddr.s_addr = inet_addr(achMCAddr);
+	stMreq.imr_interface.s_addr = INADDR_ANY;
+	nRet = setsockopt(hSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&stMreq, sizeof(stMreq));
+	if (nRet == SOCKET_ERROR) {
+		printf ("setsockopt() IP_ADD_MEMBERSHIP address %s failed, Err: %d\n", achMCAddr, WSAGetLastError());
+	} 
+
+	/* Assign our destination address */
+	stDstAddr.sin_family =      AF_INET;
+	stDstAddr.sin_addr.s_addr = inet_addr(achMCAddr);
+	stDstAddr.sin_port =        htons(nPort);
+	while(1)
+	{
+		sendAudioDataUDP(dir, true, true, hSocket, &stDstAddr);
+	} 
+
+	closesocket(hSocket);
+	WSACleanup();
+
+	return (0);
+}
+
+/* TCP BASS TESTING SERVER */
+void tcpTestServer(const char * dir)
+{
 	int	n, bytes_to_read;
     int	client_len, port = SERVER_TCP_PORT, err;
 	SOCKET sd, new_sd;
@@ -93,7 +181,6 @@ int main(void)
 		
             while(1)
             {
-				const char * dir = lib->songList.at(26).directory.c_str();
                 sendAudioData(dir, true, true, new_sd);
             }
 
@@ -104,11 +191,6 @@ int main(void)
 
 	closesocket(sd);
 	WSACleanup();
-	cout << "Please press any key to exit the program ..." << endl;
-	fprintf(stderr, "DONE"); 
-	std::cin.get();
-
-	return 0;
 }
 
 /*---------------------------------------------------------------------------------------------------------------------------
@@ -139,18 +221,12 @@ void sendAudioData(const char * filename, bool isTCP, bool isFile, SOCKET socket
     DWORD SendBytes = 0;
     DWORD BytesTransferred = 0;
     WSABUF buffer;
-
-    WSAOVERLAPPED ov;
-    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     
     streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
-	  streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
 	int opo = BASS_ErrorGetCode();
 
-	BASS_SAMPLE * bInfo;
-
 	int current_len = 0;
-    while(1)
+    while(current_len != sizeof(streamBuffer))
     {	
         readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, 2048);
 		int err = BASS_ErrorGetCode();
@@ -160,7 +236,32 @@ void sendAudioData(const char * filename, bool isTCP, bool isFile, SOCKET socket
 		current_len += 2048;
 
         err = WSASend(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
-      
-        ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+    }
+}
+
+/* SENDS AUDIO DATA OVER UDP */
+void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket, SOCKADDR_IN * toAddr)
+{
+    char streamDataBuffer[2048];
+    HSTREAM streamBuffer;
+	DWORD readLength = 0;
+    DWORD SendBytes = 0;
+    DWORD BytesTransferred = 0;
+    WSABUF buffer;
+    
+    streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
+	int opo = BASS_ErrorGetCode();
+
+	int current_len = 0;
+    while(current_len != sizeof(streamBuffer))
+    {	
+        readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, 2048);
+		int err = BASS_ErrorGetCode();
+
+        buffer.len = 2048;
+        buffer.buf = streamDataBuffer;
+		current_len += 2048;
+
+        err = WSASendTo(socket, &buffer, 1, &SendBytes, 0, (sockaddr*)toAddr, sizeof(*toAddr), NULL, NULL);
     }
 }

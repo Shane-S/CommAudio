@@ -31,6 +31,7 @@ public:
     int initUDPClient();
     
     void sendAudioData(void *data, bool isTCP, bool isFile);
+    void sendMicData(HRECORD micHandle);
     void getAudioData(bool isTCP);
     void sendPing();
 

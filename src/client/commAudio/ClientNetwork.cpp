@@ -230,6 +230,30 @@ void ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
     }
 }
 
+void ClientNetwork::sendMicData(HRECORD micHandle)
+{
+    char streamDataBuffer[2048];
+    DWORD SendBytes = 0;
+    DWORD BytesTransferred = 0;
+    WSABUF buffer;
+
+    WSAOVERLAPPED ov;
+    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+    
+    while(BASS_ChannelIsActive(micHandle))
+    {
+        DWORD readLength = BASS_ChannelGetData(micHandle, streamDataBuffer, 2048);
+
+        buffer.len = readLength;
+        buffer.buf = streamDataBuffer;
+
+        //UDP
+        WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), &ov, 0);
+
+        ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+    }
+}
+
 void ClientNetwork::sendPing()
 {
     DWORD SendBytes = 0;

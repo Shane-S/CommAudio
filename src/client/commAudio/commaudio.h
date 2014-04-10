@@ -4,6 +4,7 @@
 #include <QtWidgets/QMainWindow>
 #include <QVBoxLayout>
 #include <WinSock2.h>
+#include <thread>
 #include <Windows.h>
 
 #define WM_SOCKET   (WM_USER + 1)
@@ -12,6 +13,12 @@
 #include "ClientNetwork.h"
 #include "ConnectionSettings.h"
 #include "bass.h"
+
+typedef struct AudioPlaybackData
+{
+    char dataBuffer[2048];
+    DWORD *bytesReceived;
+} *PAUDIOPLAYBACKDATA;
 
 class commAudio : public QMainWindow
 {
@@ -23,6 +30,9 @@ public:
 
     bool nativeEvent(const QByteArray &eventType, void *message, long *result);
     void addChatMessageToHistory(QString username, QString message);
+    void startRecording();
+    void sendRecording();
+    void audioPlayback();
 
 private:
     Ui::commAudioClass  ui;
@@ -31,7 +41,7 @@ private:
     int                 playerState; //0 = paused; 1 = playing
     HSTREAM             streamHandle;
     HRECORD             micHandle;
-    char                dataBuffer[1024];
+    bool                recording; //false if not current recording, true if recording
 
     private slots:
         void newConnectDialog();

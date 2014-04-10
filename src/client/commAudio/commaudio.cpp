@@ -9,6 +9,7 @@ commAudio::commAudio(QWidget *parent)
     int device = -1;
     
     playerState = 0; //start player in paused state
+    recording = false;
 
     BASS_Init(device, freq, 0, 0, NULL);
     BASS_RecordInit(device);
@@ -25,9 +26,12 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
     MSG* recvMessage = reinterpret_cast<MSG*>(message);
  
     WSABUF buffer;
-    DWORD bytesReceived, flags;
+    DWORD bytesReceived;
+    DWORD flags;
     static int totalBytesRecv;
     char dataBuffer[2048];
+
+    //PAUDIOPLAYBACKDATA audioPlaybackData = (PAUDIOPLAYBACKDATA) malloc(sizeof(PAUDIOPLAYBACKDATA));
 
     if(recvMessage->message == WM_SOCKET)
     {
@@ -47,7 +51,7 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
                         playerState = 1;
                     }*/
                     err = BASS_StreamPutData(streamHandle, dataBuffer, bytesReceived);
-                    err = BASS_ErrorGetCode();
+                    //err = BASS_ErrorGetCode();
                 }
 
                 break;
@@ -77,6 +81,7 @@ void commAudio::newConnectDialog()
 
     clientNetwork.initWinsock();
     clientNetwork.connectToTCPServer();
+    clientNetwork.initUDPClient();
     //clientNetwork.sendPing();
 }
 
@@ -98,8 +103,6 @@ void commAudio::playPauseButtonClick()
             QIcon icon("Resources/play.png");
             ui.player_play_pause_toggle_btn->setIcon(icon);
 
-            BASS_ChannelPause(streamHandle);
-
             break;
         }
         case 1: //currently playing
@@ -107,8 +110,9 @@ void commAudio::playPauseButtonClick()
             //player is playing..person wants to pause so we pause and then change icons
             QIcon icon("Resources/pause.png");
             ui.player_play_pause_toggle_btn->setIcon(icon);
-
-            BASS_ChannelPlay(streamHandle, FALSE);
+            
+            std::thread playback(&commAudio::audioPlayback, this);
+            playback.detach();
 
             break;
         }
@@ -119,6 +123,16 @@ void commAudio::playPauseButtonClick()
             ui.player_play_pause_toggle_btn->setIcon(icon);
         }
     }
+}
+
+void commAudio::audioPlayback()
+{
+    while(playerState == 1)
+    {
+        BASS_ChannelPlay(streamHandle, FALSE);
+    }
+
+    BASS_ChannelPause(streamHandle);
 }
 
 void commAudio::sendMessageButtonClick()
@@ -139,14 +153,35 @@ void commAudio::addChatMessageToHistory(QString username, QString message)
 
 void commAudio::pushToTalkButtonPressed()
 {
-    BASS_ChannelPlay(micHandle, false);
+    recording = true;
 
-    BASS_ChannelGetData(micHandle, NULL, BASS_DATA_AVAILABLE);
+    std::thread record(&commAudio::startRecording, this);
+    std::thread sendMicRecording(&commAudio::sendRecording, this);
+    record.detach();
+    sendMicRecording.detach();
 }
 
 void commAudio::pushToTalkButtonReleased()
 {
-    BASS_ChannelPause(micHandle);
+    recording = false;
+}
+
+void commAudio::startRecording()
+{
+    while(recording)
+    {
+        BASS_ChannelPlay(this->micHandle, false);
+    }
+
+    BASS_ChannelPause(this->micHandle);
+}
+
+void commAudio::sendRecording()
+{
+    while(recording)
+    {
+        clientNetwork.sendMicData(this->micHandle);
+    }
 }
 
 commAudio::~commAudio()

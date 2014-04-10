@@ -14,8 +14,12 @@ public:
 	std::string					directory;
 
 	AudioLibrary(std::string directory, std::string supportedTypes, int numTypes, int maxSongs);
-	std::vector<std::string> grabPlaylist();
+	std::list<std::shared_ptr<WSABUF>> grabPlaylist();
+	void resetSongsSent();
+
 private:
+	int			sentSongs;
+
 	bool		checkType(std::string type);
 	bool		checkName(const char * name);
 	void		retrieveDirectory();

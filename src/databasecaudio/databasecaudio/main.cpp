@@ -1,6 +1,5 @@
 #include "ahm.h"
 #include "bass.h"
-void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket);
 void sendAudioData(const char *data, bool isTCP, bool isFile, SOCKET socket);
 using namespace std;
 #define sRate 44100
@@ -92,7 +91,7 @@ int main(void)
 		
             while(1)
             {
-				const char * dir = lib->songList.at(75).directory.c_str();
+				const char * dir = lib->songList.at(26).directory.c_str();
                 sendAudioData(dir, true, true, new_sd);
             }
 
@@ -158,42 +157,8 @@ void sendAudioData(const char * filename, bool isTCP, bool isFile, SOCKET socket
         buffer.buf = streamDataBuffer;
 		current_len += 2048;
 
-        err = WSASendTo(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
+        err = WSASend(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
       
         ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     }
-}
-
-void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket)
-{
-	char streamDataBuffer[2048];
-	HSTREAM streamBuffer;
-	DWORD readLength = 0;
-	DWORD SendBytes = 0;
-	DWORD BytesTransferred = 0;
-	WSABUF buffer;
-
-	WSAOVERLAPPED ov;
-	ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
-
-	streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
-	streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
-	int opo = BASS_ErrorGetCode();
-
-	BASS_SAMPLE * bInfo;
-
-	int current_len = 0;
-	while (1)
-	{
-		readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, 2048);
-		int err = BASS_ErrorGetCode();
-
-		buffer.len = 2048;
-		buffer.buf = streamDataBuffer;
-		current_len += 2048;
-
-		err = WSASendTo(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
-
-		ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
-	}
 }

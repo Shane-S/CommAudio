@@ -1,5 +1,8 @@
 #include "ahm.h"
 using std::string;
+using std::list;
+using std::shared_ptr;
+
 /**
 * Constructor for the audio library. Sets the supported types
 * and the song library from the passed in directory.
@@ -223,15 +226,27 @@ bool AudioLibrary::checkType(string type)
 * @author   Ramzi Chennafi
 * @date     April 3rd, 2014
 */
-std::vector<string> AudioLibrary::grabPlaylist()
+list<shared_ptr<WSABUF>> AudioLibrary::grabPlaylist()
 {
-	std::vector<string> plist;
+	list<shared_ptr<WSABUF>> plist;
+	int songs = (numsongs < 15) ? numsongs : 15;
+	sentSongs += songs;
 
-	for (int i = 0; i < numsongs; i++)
+	for (int i = 0; i < songs; i++)
 	{
-		//plist.push_back(out.str());
+		plist.splice(plist.end(), songList[i].serialize());
 	}
 
 	return plist;
 }
-
+/**
+* Resets the song data sent counter.
+*
+* @designer Ramzi Chennafi
+* @author   Ramzi Chennafi
+* @date     April 3rd, 2014
+*/
+void AudioLibrary::resetSongsSent()
+{
+	sentSongs = 0;
+}

@@ -17,16 +17,12 @@
 
 // Initialise the server and prepare to serve the client
 BOOL ServerInitSocket(LPTransferProps props);
-DWORD WINAPI Serve(VOID *hwnd);
+DWORD WINAPI Serve(VOID *pProps);
 
 // Listen for connection attempts (TCP) and data (UDP)
 BOOL ListenTCP(LPTransferProps props);
 BOOL ListenUDP(LPTransferProps props);
 
-
-// Completion routine prototypes
-VOID CALLBACK UDPRecvCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
-	LPOVERLAPPED lpOverlapped, DWORD dwFlags);
 
 VOID CALLBACK ServerUniSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags);

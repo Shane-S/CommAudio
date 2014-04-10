@@ -80,7 +80,7 @@ int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ..
 ---------------------------------------------------------------------------------------------------------------------------*/
 VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, HWND hwnd)
 {
-	DWORD			dwHostMode = (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE);
+	//DWORD			dwHostMode = (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE);
 	FILE			*file;
 	CHAR			log[512] = { 0 };
 	INT				written = 0;

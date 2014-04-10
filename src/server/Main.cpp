@@ -18,7 +18,6 @@
 -------------------------------------------------------------------------------------------------------------------------*/
 
 #include "Main.h"
-#include "WndProc.h"
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: WinMain
@@ -40,54 +39,15 @@
 -- This is the entry point to the program. It sets up the window, creates a TransferProps structure, and sets the default
 -- host mode before displaying the GUI.
 ---------------------------------------------------------------------------------------------------------------------------*/
-int WINAPI WinMain(HINSTANCE hPrevInstance, HINSTANCE hInstance, LPSTR lpszCmdArgs, int iCmdShow)
+int main(int argc, char *argv[])
 {
-	HWND			hwnd;
-	MSG				msg;
-	WNDCLASS		wndclass;
-	WSADATA			wsaData;
+	WSADATA	wsaData;
 	LPTransferProps props = CreateTransferProps();
-
-	wndclass.style = CS_HREDRAW | CS_VREDRAW;
-	wndclass.lpfnWndProc = WndProc;
-	wndclass.cbClsExtra = 0;
-	wndclass.cbWndExtra = sizeof(DWORD) + sizeof(LPTransferProps);
-	wndclass.hInstance = hInstance;
-	wndclass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-	wndclass.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wndclass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-	wndclass.lpszMenuName = MAKEINTRESOURCE(IDR_MENU1);
-	wndclass.lpszClassName = CLASS_NAME;
-
-	if (!RegisterClass(&wndclass))
-	{
-		MessageBox(NULL, TEXT("Fatal error; extiting the program"), TEXT("Error"), MB_ICONERROR);
-		return 0;
-	}
-
+	
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
-
-	if ((props = CreateTransferProps()) == NULL)
-	{
-		MessageBox(NULL, TEXT("Unable to allocate memory for transfer properties."), TEXT("Error"), MB_ICONERROR);
-		return -1;
-	}
-
-	hwnd = CreateWindow(CLASS_NAME, TEXT("Test Program"), WS_OVERLAPPEDWINDOW,
-		0, 0, 600, 600, NULL, NULL, hInstance, NULL);
-
-	SetWindowLongPtr(hwnd, GWLP_TRANSFERPROPS, (LONG)props);
-	SetWindowLongPtr(hwnd, GWLP_HOSTMODE, ID_HOSTTYPE_CLIENT);
-
-	ShowWindow(hwnd, iCmdShow);
-	UpdateWindow(hwnd);
-
-	while (GetMessage(&msg, NULL, 0, 0))
-	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
+	ServerInitSocket(props);
+	Serve(props);
 
 	WSACleanup();
-	return msg.wParam;
+	return 0;
 }

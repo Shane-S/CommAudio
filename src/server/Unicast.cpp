@@ -30,7 +30,7 @@ VOID CALLBACK UnicastGeneralRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
 	if (dwErrorCode)
 	{
 		TCHAR err_buf[8];
-		LogError(TEXT("ServerUniRecvCompletion"), itoa(dwErrorCode, err_buf, 10));
+		//LogError(TEXT("ServerUniRecvCompletion"), itoa(dwErrorCode, err_buf, 10));
 		closesocket(props->socket);
 		CloseHandle(props->audioFile);
 		props->transferCancelled = TRUE;
@@ -67,7 +67,6 @@ VOID CALLBACK UnicastFileSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered
 	if (dwErrorCode) //|| dwNumberOfBytesTransfered != props->dataBuffer.len) // error or didn't send everything
 	{
 		char err_buf[8];
-		LogError(TEXT("ServerUniSendCompletion"), itoa(dwErrorCode, err_buf, 10));
 		props->transferCancelled = TRUE;
 		return;
 	}

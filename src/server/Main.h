@@ -1,10 +1,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include <WinSock2.h>
-#include <Windows.h>
-#include "WinStorage.h"
-#include "TransferProps.h"
+#include "ServerTransfer.h"
 
 // Name constants
 #define CLASS_NAME	TEXT("Assn2")

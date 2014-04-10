@@ -60,13 +60,13 @@ BOOL ServerInitSocket(LPTransferProps props)
  * @param[in] hwnd Handle to the window (cast as a VOID * for the thread prototype).
  * @return The thread's status on exit.
  */
-DWORD WINAPI Serve(VOID *hwnd)
+DWORD WINAPI Serve(VOID *pProps)
 {
 	DWORD           bytesRecvd;
+	LPTransferProps props = (LPTransferProps)pProps;
 	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
 	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
-	WSAEVENT        hEvent      = CreateEvent(NULL, 0, 0, "AcceptExEvt");
-	LPTransferProps props		= (LPTransferProps)GetWindowLongPtr((HWND)hwnd, GWLP_TRANSFERPROPS);
+	WSAEVENT        hEvent      = CreateEvent(NULL, 0, 0, TEXT("AcceptExEvt"));
 	LPSOCKADDR_IN   client		= (LPSOCKADDR_IN)malloc(sizeof(SOCKADDR_IN));
 	SOCKET			listenSock	= props->socket;
 	SOCKET			acceptSock  = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
@@ -82,7 +82,7 @@ DWORD WINAPI Serve(VOID *hwnd)
 
 	OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
 	WSAWaitForMultipleEvents(1, &ovr->hEvent, FALSE, INFINITE, TRUE);
-	MessageBox(NULL, "Accepted client!", "ACCEPT THIS BITCH", MB_OK);
+	MessageBox(NULL, TEXT("Accepted client!"), TEXT("ACCEPT THIS BITCH"), MB_OK);
 	//closesocket(props->socket);
 
 	ServerCleanup(props);
@@ -112,9 +112,6 @@ BOOL ListenUDP(LPTransferProps props)
 {
 	DWORD flags = 0, error = 0;
 	props->dwTimeout = INFINITE;
-
-	WSARecvFrom(props->socket, &props->dataBuffer, 1, NULL, &flags, NULL, NULL, (LPOVERLAPPED)props,
-		UDPRecvCompletion);
 
 	error = WSAGetLastError();
 	if (error && error != WSA_IO_PENDING)

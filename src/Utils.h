@@ -1,12 +1,10 @@
 #ifndef ASSN2_UTILS
 #define ASSN2_UTILS
 
-#include "WinStorage.h"
+#include "TransferProps.h"
 #include <Windows.h>
 #include <tchar.h>
 #include <cstdio>
-#include "gui/resource.h"
-#include "TransferProps.h"
 
 #define TIMESTAMP_SIZE 27
 

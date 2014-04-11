@@ -78,7 +78,7 @@ int ClientNetwork::connectToTCPServer()
     struct sockaddr_in server;
     struct hostent *hp;
 
-    if((serverTCPSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, 0)) == INVALID_SOCKET)
+    if((serverTCPSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED)) == INVALID_SOCKET)
     {
         return -1; //error creating socket
     }
@@ -132,7 +132,7 @@ int ClientNetwork::initUDPClient()
     struct sockaddr_in server, client;
     struct hostent *hp;
 
-    if((serverUDPSocket = WSASocket(PF_INET, SOCK_DGRAM, 0, NULL, 0, 0)) == INVALID_SOCKET)
+    if((serverUDPSocket = WSASocket(PF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED)) == INVALID_SOCKET)
     {
         return -1; //error creating socket
     }
@@ -193,6 +193,9 @@ void ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
     DWORD BytesTransferred = 0;
     WSABUF buffer;
     
+    WSAOVERLAPPED ov;
+    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+
     if(isFile) //not streaming from memory
     {
         //cast string to void*:: void *vp = static_cast<void*>(string);
@@ -217,14 +220,15 @@ void ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
         if(!isTCP)
         {
             //UDP
-            WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), 0, 0);
+            WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), &ov, 0);
         }
         else
         {
             //TCP
-            WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, 0, NULL);
+            WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, &ov, NULL);
         }
 
+        ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     }
 }
 
@@ -235,6 +239,9 @@ void ClientNetwork::sendMicData(HRECORD micHandle)
     DWORD BytesTransferred = 0;
     WSABUF buffer;
     
+    WSAOVERLAPPED ov;
+    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+
     while(BASS_ChannelIsActive(micHandle))
     {
         DWORD readLength = BASS_ChannelGetData(micHandle, streamDataBuffer, 2048);
@@ -243,8 +250,9 @@ void ClientNetwork::sendMicData(HRECORD micHandle)
         buffer.buf = streamDataBuffer;
 
         //UDP
-        int err = WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), 0, 0);
-
+        int err = WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), &ov, 0);
+        
+        ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     }
 }
 
@@ -257,16 +265,20 @@ void ClientNetwork::sendPing()
     buffer.len = 4;
     buffer.buf = (char *)&len;
 
-    WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, 0, NULL);
+    WSAOVERLAPPED ov;
+    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+
+    WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, &ov, NULL);
     int err = WSAGetLastError();
-    
+    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+
     std::string usernameStr = connectionSettings.getUsername();
 
     buffer.len = usernameStr.size();
     buffer.buf = (char *)malloc(buffer.len);
     memcpy(buffer.buf, usernameStr.c_str(), buffer.len);
   
-    WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, 0, NULL);
+    WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, &ov, NULL);
     err = WSAGetLastError();
 }
 
@@ -277,9 +289,10 @@ void ClientNetwork::getAudioData(bool isTCP)
 }
 
 //closes a socket
-void ClientNetwork::closeSocket(SOCKET socket)
+//closes tcp if true, udp if false
+void ClientNetwork::closeSocket(bool isTCP)
 {
-    closesocket(socket);
+    (isTCP == true) ? closesocket(serverTCPSocket) : closesocket(serverUDPSocket);
 }
 
 //Wrapper function for terminating the use of Winsock2 DLL

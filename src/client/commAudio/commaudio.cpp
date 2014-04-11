@@ -18,17 +18,24 @@ commAudio::commAudio(QWidget *parent)
     ui.setupUi(this);
 }
 
+void CALLBACK getAudioDataCallback(IN DWORD dwError, IN DWORD cbTransferred, IN LPWSAOVERLAPPED lpOverlapped, IN DWORD dwFlags)
+{
+    PAUDIORECEIVESTRUCT audioStruct = (PAUDIORECEIVESTRUCT)lpOverlapped;
+    
+    if(cbTransferred > 0)
+    {
+        int err = BASS_StreamPutData(audioStruct->streamH, audioStruct->buffer.buf, cbTransferred);
+        err = BASS_ErrorGetCode();
+    }
+}
+
 bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
     MSG* recvMessage = reinterpret_cast<MSG*>(message);
- 
-    WSABUF buffer;
+
     DWORD bytesReceived;
     DWORD flags;
     static int totalBytesRecv;
-    char dataBuffer[2048];
-
-    //PAUDIOPLAYBACKDATA audioPlaybackData = (PAUDIOPLAYBACKDATA) malloc(sizeof(PAUDIOPLAYBACKDATA));
 
     if(recvMessage->message == WM_SOCKET)
     {
@@ -37,28 +44,22 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
             case FD_READ:
             {
                 flags = 0;
-                buffer.buf = (CHAR*)dataBuffer;
-                buffer.len = 2048;
-                int err = WSARecv(clientNetwork.getTCPSocket(), &buffer, 1, &bytesReceived, &flags, NULL, NULL);
-            
-                if(bytesReceived > 0)
-                {
-                    /**if(playerState == 0)
-                    {
-                        playerState = 1;
-                    }*/
-                    err = BASS_StreamPutData(streamHandle, dataBuffer, bytesReceived);
-                    //err = BASS_ErrorGetCode();
-                }
 
+                PAUDIORECEIVESTRUCT audioStruct = (PAUDIORECEIVESTRUCT) malloc(sizeof(PAUDIORECEIVESTRUCT));
+                memset(&audioStruct->fakeOverlapped, 0, sizeof(WSAOVERLAPPED));
+                audioStruct->streamH = streamHandle;
+                audioStruct->buffer.len = 2048;
+                audioStruct->buffer.buf = (char *) malloc(audioStruct->buffer.len);
+
+                int err = WSARecv(clientNetwork.getTCPSocket(), &audioStruct->buffer, 1, &bytesReceived, &flags, (LPOVERLAPPED)audioStruct, getAudioDataCallback);
+                
                 break;
             }
             case FD_WRITE:
-            {
-                connected = true;
-                
+            {                
                 if(checkHandshake == 0)
                 {
+                    connected = true;
                     clientNetwork.sendPing();
                     checkHandshake = 1;
                 }
@@ -68,6 +69,9 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
             {
                 connected = false;
                 checkHandshake = 0;
+                clientNetwork.closeSocket(true);
+                clientNetwork.closeSocket(false);
+
                 break;
             }
         }
@@ -81,30 +85,43 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
 BOOL CALLBACK MyRecordProc(HRECORD handle, const void *buffer, DWORD length, void *user)
 {
     DWORD SendBytes = 0;
-    DWORD BytesTransferred = 0;
-    WSABUF WSbuffer;
-	int err;
-	char * buf = (char*)buffer;
+	DWORD BytesTransferred = 0;
+	WSABUF WSbuffer;
     PCONNECTIONSTRUCT cStruct = (PCONNECTIONSTRUCT) user;
+	int err, size;
+	char * buf = (char*)buffer;
+	int numChunks = length / AUDIO_BUFFER_LENGTH;
 
-	int pos = 0;
-	while(length > pos)
+	WSbuffer.len = AUDIO_BUFFER_LENGTH;
+
+	while (numChunks)
 	{
-		WSbuffer.len = AUDIO_BUFFER_LENGTH;
-		WSbuffer.buf = (char*)buf + pos;
-
-        err = WSASendTo(cStruct->UDPSocket , &WSbuffer, 1, &SendBytes, 0, (sockaddr*)&cStruct->UDPSockAddr , sizeof(cStruct->UDPSockAddr), NULL, NULL);
-
-		pos += AUDIO_BUFFER_LENGTH;
-
-        Sleep(SLEEP_DURATION);
+		WSbuffer.buf = buf;
+        err = WSASendTo(cStruct->UDPSocket, &WSbuffer, 1, &SendBytes, 0, (sockaddr*)&cStruct->UDPSockAddr, sizeof(cStruct->UDPSockAddr), NULL, NULL);
+		buf += AUDIO_BUFFER_LENGTH;
+		numChunks--;
 	}
-    return true; // continue recording
+
+	if (size = (length % AUDIO_BUFFER_LENGTH))
+	{
+		WSbuffer.buf = buf;
+		WSbuffer.len = size;
+		err = WSASendTo(cStruct->UDPSocket, &WSbuffer, 1, &SendBytes, 0, (sockaddr*)&cStruct->UDPSockAddr, sizeof(cStruct->UDPSockAddr), NULL, NULL);
+	}
+
+	return TRUE; // continue recording
 }
 
 void commAudio::newConnectDialog()
 {
     playerState = 0; //start player in paused state
+
+    if(connected == true)
+    {
+        clientNetwork.closeSocket(true);
+        clientNetwork.closeSocket(false);
+        connected = false;
+    }
 
     ConnectDialog *connectDialog = new ConnectDialog;
     //connectDialog->show();
@@ -207,8 +224,25 @@ void commAudio::pushToTalkButtonReleased()
     BASS_ChannelPause(micHandle);
 }
 
+void commAudio::saveToFileCheckboxHandler()
+{
+
+}
+
 commAudio::~commAudio()
 {
+    if(playerState == 1)
+    {
+        BASS_ChannelPause(streamHandle);
+    }
+
+    if(connected == true)
+    {
+        clientNetwork.closeSocket(true);
+        clientNetwork.closeSocket(false);
+        connected = false;
+    }
+
     BASS_Free();
     BASS_RecordFree();
     clientNetwork.terminateWinSock();

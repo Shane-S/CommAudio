@@ -298,6 +298,7 @@ public:
         QObject::connect(send_chat_message_btn, SIGNAL(clicked()), commAudioClass, SLOT(sendMessageButtonClick()));
         QObject::connect(push_to_talk_btn, SIGNAL(pressed()), commAudioClass, SLOT(pushToTalkButtonPressed()));
         QObject::connect(push_to_talk_btn, SIGNAL(released()), commAudioClass, SLOT(pushToTalkButtonReleased()));
+        QObject::connect(checkBox_save_current_song, SIGNAL(stateChanged(int)), commAudioClass, SLOT(saveToFileCheckboxHandler()));
 
         QMetaObject::connectSlotsByName(commAudioClass);
     } // setupUi

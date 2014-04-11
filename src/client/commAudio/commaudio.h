@@ -8,8 +8,7 @@
 #include <Windows.h>
 
 #define WM_SOCKET   (WM_USER + 1)
-#define AUDIO_BUFFER_LENGTH 2048
-#define SLEEP_DURATION  5
+#define AUDIO_BUFFER_LENGTH 4096
 
 #include "ui_commaudio.h"
 #include "ClientNetwork.h"
@@ -21,6 +20,13 @@ typedef struct connectionStruct
 	SOCKET UDPSocket;
 	SOCKADDR_IN UDPSockAddr;
 } *PCONNECTIONSTRUCT, connectionStruct;
+
+typedef struct audioReceiveTCPStruct
+{
+    WSAOVERLAPPED fakeOverlapped;
+    HSTREAM streamH;
+    WSABUF buffer;
+} *PAUDIORECEIVESTRUCT, audioReceiveTCPStruct;
 
 class commAudio : public QMainWindow
 {
@@ -52,6 +58,7 @@ private:
         void sendMessageButtonClick();
         void pushToTalkButtonPressed();
         void pushToTalkButtonReleased();
+        void saveToFileCheckboxHandler();
 };
 
 #endif // COMMAUDIO_H

@@ -651,6 +651,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>checkBox_save_current_song</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>commAudioClass</receiver>
+   <slot>saveToFileCheckboxHandler()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>465</x>
+     <y>442</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>385</x>
+     <y>294</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>newConnectDialog()</slot>
@@ -659,5 +675,6 @@
   <slot>sendMessageButtonClick()</slot>
   <slot>pushToTalkButtonPressed()</slot>
   <slot>pushToTalkButtonReleased()</slot>
+  <slot>saveToFileCheckboxHandler()</slot>
  </slots>
 </ui>

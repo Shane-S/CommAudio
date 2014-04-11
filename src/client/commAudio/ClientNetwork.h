@@ -41,7 +41,7 @@ public:
     void setHWND(HWND hwnd_) {hwnd = hwnd_;}
     void setConnectionSettings(ConnectionSettings connectionSettings_) { connectionSettings = connectionSettings_; }
 
-    void closeSocket(SOCKET socket);
+    void closeSocket(bool isTCP);
 };
 
 #endif

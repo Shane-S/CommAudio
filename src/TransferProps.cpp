@@ -36,7 +36,7 @@ LPTransferProps CreateTransferProps()
 	props->paddr_in->sin_family = AF_INET;
 	props->paddr_in->sin_port = htons(PORTNUM);
 
-	props->socket = 0;
+	props->listenSocket = 0;
 	props->nSockType = SOCK_STREAM;
 
 	memset(&props->wsaOverlapped, 0, sizeof(WSAOVERLAPPED));
@@ -57,7 +57,7 @@ LPTransferProps CreateTransferProps()
 
 VOID DestroyTransferProps(LPTransferProps props)
 {
-	closesocket(props->socket);
+	closesocket(props->listenSocket);
 	CloseHandle(props->audioFile);
 	free(props->paddr_in);
 	free(props->dataBuffer.buf);

@@ -1,4 +1,6 @@
 #include "ServerTransfer.h"
+#include "Client.h"
+#include "ServerInfo.h"
 
 using std::vector;
 using std::string;
@@ -22,11 +24,14 @@ using std::string;
  * @file ServerTransfer.cpp
  */
 
+extern std::unique_ptr<AudioLibrary> lib;
+
 LPFN_ACCEPTEX             AcceptPtr;                // Pointer to the AcceptEx function
 LPFN_GETACCEPTEXSOCKADDRS GetAcceptExSockaddrsPtr;  // Pointer to the GetAcceptExSockaddrs function
 WSABUF                    nameWsaBuf;				// Holds a newly connected client's name
 vector<ClientStruct>      clientList;				// 
 int                       lastClient;
+HSTREAM                   streamBuffer;
 
 /**
  * Gets function pointers to the extended windows sockets functions allowing overlapped accept calls.
@@ -76,7 +81,7 @@ BOOL ServerInitExtendedFuncs()
  */
 BOOL ServerInitSocket(LPTransferProps props)
 {
-	SOCKET s = WSASocket(AF_INET, props->nSockType, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
+	SOCKET s = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	BOOL set = TRUE;
 
 	props->paddr_in->sin_addr.s_addr = htonl(INADDR_ANY);
@@ -93,7 +98,12 @@ BOOL ServerInitSocket(LPTransferProps props)
 		MessageBoxPrintf(MB_ICONERROR, TEXT("bind Failed"), TEXT("Could not bind socket, error %d"), WSAGetLastError());
 		return FALSE;
 	}
-	props->socket = s;
+	props->listenSocket  = s;
+
+	props->paddr_in->sin_port = htons(7001);
+	s = WSASocket(AF_INET, SOCK_DGRAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
+
+	props->udpListenSock = s;
 	return TRUE;
 }
 
@@ -111,19 +121,27 @@ DWORD WINAPI Serve(VOID *pProps)
 	LPTransferProps props = (LPTransferProps)pProps;
 	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
 	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
-	WSAOVERLAPPED   fakeOvr;
-	WSAEVENT        hEvents[] = { CreateEvent(NULL, FALSE, FALSE, TEXT("AcceptExEvt")) };
-	SOCKET			listenSock	= props->socket;
+	ServerInfo      serve(7000, 7001);
+	WSAEVENT        hEvents[] = { serve.getEvent() };
+	//SOCKET			listenSock	= props->listenSocket;
 	SOCKET			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	DWORD			flagsAreSeriouslyStupid = 0;
 
+	char streamDataBuffer[BUFSIZE];
+	DWORD readLength = 0;
+	DWORD SendBytes = 0;
+	DWORD BytesTransferred = 0;
+	WSABUF buffer;
+
 	memset(ovr, 0, sizeof(WSAOVERLAPPED));
-	memset(&fakeOvr, 0, sizeof(WSAOVERLAPPED));
 	ovr->hEvent = hEvents[0];
 
-	listen(listenSock, 5);
+	listen(serve.getTCPListen(), 5);
 
-	OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
+	streamBuffer = BASS_StreamCreateFile(FALSE, lib->songList[0].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
+	int err = BASS_ErrorGetCode();
+
+	OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, &serve.acceptOvr);
 	while (1)
 	{
 		int evt = WSAWaitForMultipleEvents(1, hEvents, FALSE, WSA_INFINITE, TRUE);
@@ -154,7 +172,7 @@ DWORD WINAPI Serve(VOID *pProps)
 
 			int err = GetLastError();
 			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
-			OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
+			OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
 		}
 	}
 
@@ -169,13 +187,27 @@ DWORD WINAPI Serve(VOID *pProps)
 VOID CALLBACK RecvNameCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped,
 	DWORD dwFlags)
 {
+	char streamDataBuffer[BUFSIZE];
+	DWORD readLength = 0;
+	DWORD SendBytes = 0;
+
 	ClientStruct *clnt = (ClientStruct *)lpOverlapped;
 	Client *clientPtr = clnt->client;
 	string newName(nameWsaBuf.buf, nameWsaBuf.len);
+
+	WSABUF *buffer = new WSABUF;
 	
 	clientPtr->setName(newName);
 	fprintf(stderr, "Accepted client with address %s and name %s\n", inet_ntoa(clientPtr->getAddr().sin_addr), 
 		clientPtr->getName().c_str());
+
+	readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, BUFSIZE);
+	if (!readLength)
+		return;
+	buffer->len = BUFSIZE;
+	buffer->buf = streamDataBuffer;
+
+	WSASend(clientPtr->getSock(), buffer, 1, NULL, 0, &clnt->fakeOvr, UnicastFileSend);
 }
 
 /**

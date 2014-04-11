@@ -2,6 +2,7 @@
 #define UNICAST_H
 
 #include "ServerTransfer.h"
+#include "ServerInfo.h"
 
 
 // Completion routines for various client requests

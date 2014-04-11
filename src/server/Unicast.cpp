@@ -9,6 +9,9 @@
 
 #include "Unicast.h"
 
+extern std::unique_ptr<AudioLibrary> lib;
+extern HSTREAM streamBuffer;
+
 /**
 * Receives and delegates file streaming commands from clients.
 *
@@ -31,10 +34,6 @@ VOID CALLBACK UnicastGeneralRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
 	{
 		TCHAR err_buf[8];
 		//LogError(TEXT("ServerUniRecvCompletion"), itoa(dwErrorCode, err_buf, 10));
-		closesocket(props->socket);
-		CloseHandle(props->audioFile);
-		props->transferCancelled = TRUE;
-		return;
 	}
 
 	if (!dwNumberOfBytesTransfered) // Connection closed/reset
@@ -62,28 +61,28 @@ VOID CALLBACK UnicastGeneralRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
  */
 VOID CALLBACK UnicastFileSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
-	LPTransferProps props = (LPTransferProps)lpOverlapped;
-	DWORD			bytesRead;
+	ClientStruct *client = (ClientStruct *)lpOverlapped;
+	Client *actualClient = client->client;
+	WSABUF buffer;
+
 	if (dwErrorCode) //|| dwNumberOfBytesTransfered != props->dataBuffer.len) // error or didn't send everything
 	{
-		props->transferCancelled = TRUE;
 		return;
 	}
-	else if (props->transferCancelled)
-	{
-		CloseHandle(props->audioFile);
-		return;
-	}
+	char streamDataBuffer[BUFSIZE];
+	DWORD readLength = 0;
+	DWORD SendBytes = 0;
 
-	ReadFile(props->audioFile, props->dataBuffer.buf, BUFSIZE, &bytesRead, NULL);
-	if (!bytesRead) // No more data to read; finished sending
+	readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, BUFSIZE);
+	if (readLength == -1)
 	{
-		CloseHandle(props->audioFile);
-		props->transferCancelled = TRUE;
+		int err = BASS_ErrorGetCode();
 		return;
 	}
-	props->dataBuffer.len = bytesRead;
-	WSASend(props->socket, &props->dataBuffer, 1, NULL, 0, &props->wsaOverlapped, UnicastFileSend);
+	buffer.len = BUFSIZE;
+	buffer.buf = streamDataBuffer;
+
+	WSASend(actualClient->getSock(), &buffer, 1, NULL, 0, &client->fakeOvr, UnicastFileSend);
 }
 
 /**

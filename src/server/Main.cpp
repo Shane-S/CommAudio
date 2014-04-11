@@ -20,6 +20,8 @@
 #include "Main.h"
 #include "../bass.h"
 
+std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("c:\\users\\Shane\\Music\\"), string(",mp3,wav,"), 3, 500));
+
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: WinMain
 -- January 30th, 2014
@@ -50,7 +52,7 @@ int main(int argc, char *argv[])
 
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	ServerInitExtendedFuncs();
-	ServerInitSocket(props);
+	//ServerInitSocket(props);
 	Serve(props);
 
 	WSACleanup();

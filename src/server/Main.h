@@ -1,6 +1,8 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include "audioManagement.h"
+#include "ahm.h"
 #include "ServerTransfer.h"
 
 // Name constants

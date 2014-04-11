@@ -3,7 +3,11 @@
 extern char achMCAddr[MAXADDRSTR];
 extern u_short nPort;
 
-char * ipudp = "192.168.43.236";
+char glbBuffer[100000];
+int buflen = 0;
+int curpos = 0;
+
+char * ipudp = "127.0.0.1";
 
 /* SENDS AUDIO DATA OVER UDP */
 void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket, SOCKADDR_IN * toAddr)
@@ -38,22 +42,28 @@ BOOL CALLBACK MyRecordProc(HRECORD handle, const void *buffer, DWORD length, voi
 	DWORD SendBytes = 0;
 	DWORD BytesTransferred = 0;
 	WSABUF WSbuffer;
-	int err;
-	char * buf = (char*)buffer;
 	connectionStruct * cStruct = (connectionStruct*)user;
+	int err, size;
+	char * buf = (char*)buffer;
+	int numChunks = length / BUFSIZE;
 
-	WSbuffer.buf = buf;
 	WSbuffer.len = BUFSIZE;
 
-	int pos = 0;
-	while (length > pos)
+	while (numChunks)
 	{
-		buf = (char*)buf + pos;
-
+		WSbuffer.buf = buf;
 		err = WSASendTo(cStruct->hSock, &WSbuffer, 1, &SendBytes, 0, (sockaddr*)&cStruct->toAddr, sizeof(cStruct->toAddr), NULL, NULL);
-
-		pos += BUFSIZE;
+		buf += BUFSIZE;
+		numChunks--;
 	}
+
+	if (size = (length % BUFSIZE))
+	{
+		WSbuffer.buf = buf;
+		WSbuffer.len = size;
+		err = WSASendTo(cStruct->hSock, &WSbuffer, 1, &SendBytes, 0, (sockaddr*)&cStruct->toAddr, sizeof(cStruct->toAddr), NULL, NULL);
+	}
+
 	return TRUE; // continue recording
 }
 
@@ -67,6 +77,7 @@ void recordAudio(SOCKET socket, SOCKADDR_IN toAddr)
 	int err = BASS_RecordInit(-1);
 	err = BASS_ErrorGetCode();
 
+	memset(glbBuffer, 0, BUFSIZE);
 	HRECORD rcHandle = BASS_RecordStart(44100, 2, 0, MyRecordProc, (void*)&cStruct);
 }
 
@@ -106,7 +117,7 @@ int multicastClient() {
 	/* Name the socket (assign the local port number to receive on) */
 	stLclAddr.sin_family = AF_INET;
 	stLclAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	stLclAddr.sin_port = htons(nPort);
+	stLclAddr.sin_port = htons(TIMECAST_PORT);
 	nRet = bind(hSocket, (struct sockaddr*) &stLclAddr, sizeof(stLclAddr));
 	if (nRet == SOCKET_ERROR) {
 		printf("bind() port: %d failed, Err: %d\n", nPort,
@@ -194,7 +205,7 @@ void udpServer()
 		}
 
 		int err = BASS_StreamPutData(streamHandle, buf, BUFSIZE);
-		BASS_ChannelPlay(streamHandle, TRUE);
+		BASS_ChannelPlay(streamHandle, FALSE);
 	}
 
 	closesocket(sd);
@@ -235,14 +246,14 @@ void udpClient()
 	}
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;	 // Specify the Internet (TCP/IP) Address family
-	sin.sin_port = htons(nPort); // Convert to network byte order
+	sin.sin_port = htons(TIMECAST_PORT); // Convert to network byte order
 	sin.sin_addr.s_addr = inet_addr(ipudp);
 
 	// Transmit data through an unconnected (UDP) socket
-	if (sendto(sock, buf, BUFSIZE, 0, (struct sockaddr *)&sin, sizeof(sin)) <= 0)
+	recordAudio(sock, sin);
+	while (1)
 	{
-		perror("sendto error");
-		exit(1);
+
 	}
 
 	closesocket(sock);

@@ -2,7 +2,8 @@
 
 extern char achMCAddr[MAXADDRSTR];
 extern u_short nPort;
-
+char * tcpip = "192.168.43.116";
+#define TCPPORT 7000
 /* TCP BASS TESTING SERVER */
 void tcpTestServer(const char * dir)
 {
@@ -136,4 +137,76 @@ void sendAudioData(const char * filename, bool isTCP, bool isFile, SOCKET socket
 
 		err = WSASend(socket, &buffer, 1, &SendBytes, 0, 0, NULL);
 	}
+}
+
+void tcpTestClient()
+{
+	int n, ns, bytes_to_read;
+	int port, err;
+	SOCKET sd;
+	struct hostent	*hp;
+	struct sockaddr_in server;
+	char  *host, *bp, rbuf[BUFSIZE], sbuf[BUFSIZE], **pptr;
+	WSADATA WSAData;
+	WORD wVersionRequested;
+
+	wVersionRequested = MAKEWORD(2, 2);
+	err = WSAStartup(wVersionRequested, &WSAData);
+	if (err != 0) //No usable DLL
+	{
+		printf("DLL not found!\n");
+		exit(1);
+	}
+
+	// Create the socket
+	if ((sd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+	{
+		perror("Cannot create socket");
+		exit(1);
+	}
+
+	// Initialize and set up the address structure
+	memset((char *)&server, 0, sizeof(struct sockaddr_in));
+	server.sin_family = AF_INET;
+	server.sin_port = htons(TCPPORT);
+	if ((hp = gethostbyname(tcpip)) == NULL)
+	{
+		fprintf(stderr, "Unknown server address\n");
+		exit(1);
+	}
+
+	// Copy the server address
+	memcpy((char *)&server.sin_addr, hp->h_addr, hp->h_length);
+
+	// Connecting to the server
+	if (connect(sd, (struct sockaddr *)&server, sizeof(server)) == -1)
+	{
+		fprintf(stderr, "Can't connect to server\n");
+		perror("connect");
+		exit(1);
+	}
+	printf("Connected:    Server Name: %s\n", hp->h_name);
+	pptr = hp->h_addr_list;
+	printf("\t\tIP Address: %s\n", inet_ntoa(server.sin_addr));
+	printf("Transmiting:\n");
+	memset((char *)sbuf, 0, sizeof(sbuf));
+
+	int ibuf = 5;
+	//// Transmit data throu0gh the socket
+	ns = send(sd, (char*)&ibuf, sizeof(int), 0);
+
+	char * poobuff = "Ramzi";
+	ns = send(sd, poobuff, ibuf, 0);
+	// client makes repeated calls to recv until no more data is expected to arrive.
+	/*while ((n = recv(sd, bp, bytes_to_read, 0)) < BUFSIZE)
+	{
+		bp += n;
+		bytes_to_read -= n;
+		if (n == 0)
+			break;
+	}*/
+
+	closesocket(sd);
+	WSACleanup();
+	exit(0);
 }

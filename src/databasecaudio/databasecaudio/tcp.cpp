@@ -2,7 +2,7 @@
 
 extern char achMCAddr[MAXADDRSTR];
 extern u_short nPort;
-char * tcpip = "192.168.43.116";
+char * tcpip = "192.168.0.94";
 #define TCPPORT 7000
 /* TCP BASS TESTING SERVER */
 void tcpTestServer(const char * dir)

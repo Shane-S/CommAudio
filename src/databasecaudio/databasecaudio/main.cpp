@@ -17,8 +17,8 @@ int main(void)
 	std::list<std::shared_ptr<WSABUF>> plist = lib->grabPlaylist();
 	BASS_Init(-1, 44100, 0,0,0);
 	const char * dir = lib->songList[434].directory.c_str();
-	//testMulticastServer(dir);
-	tcpTestServer(dir);
+	testMulticastServer(dir);
+	//tcpTestServer(dir);
 	//multicastClient();
 	//udpServer();
 	//udpClient();

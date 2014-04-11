@@ -52,11 +52,11 @@ int testMulticastServer(const char * dir)
 	stDstAddr.sin_addr.s_addr = inet_addr(achMCAddr);
 	stDstAddr.sin_port = htons(nPort);
 
-	recordAudio(hSocket, stDstAddr);
+	//recordAudio(hSocket, stDstAddr);
 
 	while (1)
 	{
-		//sendAudioDataUDP(dir, true, true, hSocket, &stDstAddr);
+		sendAudioDataUDP(dir, true, true, hSocket, &stDstAddr);
 	}
 
 	closesocket(hSocket);

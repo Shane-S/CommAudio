@@ -105,21 +105,27 @@ void SongData::setProperties(TagLib::FileRef sRef)
 */
 void SongData::setAlbumArt()
 {
-	std::ofstream artFile;
-
-	artFile.open(artDirectory, ios::binary);
-	if(artFile.is_open())
+	FILE * fp = fopen(artDirectory.c_str(), "rb+");
+	char * aArt;
+	if (fp != NULL)
 	{
-		/*std::stringstream string_out;
-		string_out << artFile;
-		metaStrings_.push_back(string_out.str());*/
+		fseek(fp, 0, SEEK_END);
+		int lSize = ftell(fp);
+		rewind(fp);
+
+		aArt = (char*)malloc(lSize);
+		int result = fread(aArt, 1, lSize, fp);
+		
+		metaStrings_.push_back(string(aArt));
+		
+		free(aArt);
+		fclose(fp);
 	}
 	else
 	{
 		fprintf(stderr, "Failed to open album art.\n");
+		return;
 	}
-
-	artFile.close();
 }
 /**
 * Sets the artist variable of the object.

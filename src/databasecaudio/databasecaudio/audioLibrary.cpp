@@ -297,3 +297,9 @@ void AudioLibrary::resetSongsSent()
 {
 	sentSongs = 0;
 }
+
+SongData AudioLibrary::grabRandom()
+{
+	int rand_v = rand() % numsongs;
+	return songList[rand_v];
+}

@@ -17,6 +17,7 @@ public:
 	AudioLibrary(std::string directory, std::string supportedTypes, int numTypes, int maxSongs);
 	AudioLibrary(std::string directory, std::string supportedTypes, int numTypes);
 	std::list<std::shared_ptr<WSABUF>> grabPlaylist();
+	SongData grabRandom();
 	void resetSongsSent();
 
 private:

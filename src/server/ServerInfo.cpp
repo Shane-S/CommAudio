@@ -71,22 +71,57 @@ ServerInfo::ServerInfo(const short tcpPort, const short udpPort)
 		throw "ServerInfo::ServerInfo: Coudn't join multicast group.";
 }
 
-
+/**
+ * Gets the handle for the AcceptEx event.
+ *
+ * @return The handle to the AcceptEx event.
+ *
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @date     April 11th, 2014
+ */
 HANDLE ServerInfo::getEvent() const
 {
 	return acceptOvr.hEvent;
 }
 
+/**
+ * Gets the TCP socket that's set to listening mode.
+ *
+ * @return The TCP socket that's listening.
+ *
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @date     April 11th, 2014
+ */
 SOCKET ServerInfo::getTCPListen() const
 {
 	return listenSocket;
 }
 
+/**
+ * Gets the UDP socket used for listening.
+ *
+ * @return The UDP socket that's listening for incoming information.
+ *
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @date     April 11th, 2014
+ */
 SOCKET ServerInfo::getUDPListen() const
 {
 	return udpListenSock;
 }
 
+/**
+ * Gets the UDP socket used for multicasting.
+ *
+ * @return The UDP socket that's multicasting.
+ *
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @date     April 11th, 2014
+ */
 SOCKET ServerInfo::getUDPMulticast() const
 {
 	return udpMulticast;

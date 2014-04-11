@@ -29,7 +29,7 @@ extern HSTREAM streamBuffer;
 */
 VOID CALLBACK UnicastGeneralRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
-	LPTransferProps props = (LPTransferProps)lpOverlapped;
+	/*LPTransferProps props = (LPTransferProps)lpOverlapped;
 	if (dwErrorCode)
 	{
 		TCHAR err_buf[8];
@@ -40,7 +40,7 @@ VOID CALLBACK UnicastGeneralRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
 	{
 		DestroyTransferProps(props);
 		return;
-	}
+	}*/
 }
 
 /**

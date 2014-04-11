@@ -2,7 +2,21 @@
 
 extern HSTREAM streamBuffer2;
 
-VOID CALLBACK MulticastSendComplete(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
+/**
+ * Sends the file over multicast.
+ *
+ * Continues calling the completion routine until no more data is read from the file, at which point it returns.
+ *
+ * @param dwErrorCode                The error code (if any) indicating an error that occurred in the transfer.
+ * @param dwNumberOfBytesTransferred The number of bytes transferred.
+ * @param lpOverlapped               A pointer to the ServerInfo object containing the client list.
+ * @param dwFlags                    The flags in use during the transfer.
+ *
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @date April 11th, 2014
+ */
+VOID CALLBACK MulticastSendComplete(DWORD dwErrorCode, DWORD dwNumberOfBytesTransferred, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
 	ServerInfo *server = (ServerInfo *)lpOverlapped;
 	SOCKADDR_IN multicastAddr;

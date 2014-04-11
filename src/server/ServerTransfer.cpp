@@ -78,18 +78,14 @@ BOOL ServerInitExtendedFuncs()
  *
  * @author Shane Spoor
  * @designer Shane Spoor
- * @param[in] hwnd Handle to the window (cast as a VOID * for the thread prototype).
- * @return The thread's status on exit.
  */
-DWORD WINAPI Serve(VOID *pProps)
+DWORD WINAPI Serve()
 {
 	DWORD           bytesRecvd;
-	LPTransferProps props = (LPTransferProps)pProps;
 	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
 	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
 	ServerInfo      serve(7000, 7001);
 	WSAEVENT        hEvents[] = { serve.getEvent() };
-	//SOCKET			listenSock	= props->listenSocket;
 	SOCKET			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	DWORD			flagsAreSeriouslyStupid = 0;
 
@@ -157,8 +153,6 @@ DWORD WINAPI Serve(VOID *pProps)
 			OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
 		}
 	}
-
-	ServerCleanup(props);
 	return 0;
 }
 
@@ -193,34 +187,19 @@ VOID CALLBACK RecvNameCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
 }
 
 /**
- * Resets server properties in preparation for the next transfer.
- *
- * @param props Pointer to a TransferProps structure to free.
- */
-VOID ServerCleanup(LPTransferProps props)
-{
-	//recvd = 0;
-	//if (destFile)
-	//	CloseHandle(destFile);
-	//destFile = 0;
-}
-
-/**
  * Increments the number of packets received when a WSARecvFrom completes on a UDP socket.
  *
  * @param props Pointer to the TransferProps structure containing details about this transfer.
  * @return True if the WSARecvFrom succeeded, or false if something went wrong.
  */
-BOOL ListenUDP(LPTransferProps props)
+BOOL ListenUDP(/*LPTransferProps props*/)
 {
 	DWORD flags = 0, error = 0;
-	props->dwTimeout = INFINITE;
 
 	error = WSAGetLastError();
 	if (error && error != WSA_IO_PENDING)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecvFrom Error"), TEXT("WSARecvFrom encountered error %d"), error);
-		props->dwTimeout = 0;
 		return FALSE;
 	}
 	return TRUE;

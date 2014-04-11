@@ -297,9 +297,54 @@ void AudioLibrary::resetSongsSent()
 {
 	sentSongs = 0;
 }
-
+/**
+* Grabs a random song. It's not very random.
+*
+* @designer Ramzi Chennafi
+* @author   Ramzi Chennafi
+* @date     April 3rd, 2014
+*/
 SongData AudioLibrary::grabRandom()
 {
 	int rand_v = rand() % numsongs;
 	return songList[rand_v];
+}
+/**
+* Grabs a file based on the specified title, artist and album. 
+*
+* Throws an invalid argument exception when no file matching the parameters is found.
+*
+* @param[in] title	title of the song.
+* @param[in] artist artist of the song.
+* @param[in] album	album of the song
+* @return	 SongData A Song Data object that matches the specified parameters 
+*
+* @designer Ramzi Chennafi
+* @author   Ramzi Chennafi
+* @date     April 3rd, 2014
+*/
+SongData AudioLibrary::grabSpecifiedFile(string title, string artist, string album)
+{
+	int count = 3, match = 0;
+
+	SongData sData = songList[0];
+
+	for (int i = 0; i < numsongs; i++)
+	{
+		if (match == 3)
+			return sData;
+		else
+			match = 0;
+
+		sData = songList[i];
+		
+		if (sData.getData(TITLE) == title)
+			match++;
+		if (sData.getData(ARTIST) == artist)
+			match++;
+		if (sData.getData(ALBUM) == album)
+			match++;
+	}
+
+	throw std::invalid_argument("No file found");
 }

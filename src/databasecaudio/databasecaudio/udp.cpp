@@ -7,7 +7,7 @@ char glbBuffer[100000];
 int buflen = 0;
 int curpos = 0;
 
-char * ipudp = "127.0.0.1";
+char * ipudp = "192.168.0.63";
 
 /* SENDS AUDIO DATA OVER UDP */
 void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket, SOCKADDR_IN * toAddr)
@@ -200,6 +200,7 @@ void udpServer()
 		client_len = sizeof(client);
 		if ((n = recvfrom(sd, buf, BUFSIZE, 0, (struct sockaddr *)&client, &client_len)) < 0)
 		{
+			int err = WSAGetLastError();
 			perror("recvfrom error");
 			exit(1);
 		}

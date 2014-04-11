@@ -105,7 +105,7 @@ void SongData::setProperties(TagLib::FileRef sRef)
 */
 void SongData::setAlbumArt()
 {
-	FILE * fp = fopen(artDirectory.c_str(), "rb+");
+	/*FILE * fp = fopen(artDirectory.c_str(), "rb+");
 	char * aArt;
 	if (fp != NULL)
 	{
@@ -125,7 +125,7 @@ void SongData::setAlbumArt()
 	{
 		fprintf(stderr, "Failed to open album art.\n");
 		return;
-	}
+	}*/
 }
 /**
 * Sets the artist variable of the object.

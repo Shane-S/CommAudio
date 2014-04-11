@@ -118,6 +118,7 @@ public:
         actionMulticast_Radio->setObjectName(QStringLiteral("actionMulticast_Radio"));
         actionNormal_Radio = new QAction(commAudioClass);
         actionNormal_Radio->setObjectName(QStringLiteral("actionNormal_Radio"));
+        actionNormal_Radio->setEnabled(false);
         actionMulticast_Radio_2 = new QAction(commAudioClass);
         actionMulticast_Radio_2->setObjectName(QStringLiteral("actionMulticast_Radio_2"));
         centralWidget = new QWidget(commAudioClass);
@@ -299,6 +300,7 @@ public:
         QObject::connect(push_to_talk_btn, SIGNAL(pressed()), commAudioClass, SLOT(pushToTalkButtonPressed()));
         QObject::connect(push_to_talk_btn, SIGNAL(released()), commAudioClass, SLOT(pushToTalkButtonReleased()));
         QObject::connect(checkBox_save_current_song, SIGNAL(stateChanged(int)), commAudioClass, SLOT(saveToFileCheckboxHandler()));
+        QObject::connect(actionMulticast_Radio_2, SIGNAL(triggered()), commAudioClass, SLOT(multicastSwitch()));
 
         QMetaObject::connectSlotsByName(commAudioClass);
     } // setupUi

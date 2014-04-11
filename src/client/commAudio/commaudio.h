@@ -49,6 +49,7 @@ private:
     bool                connected;
     int                 checkHandshake;
     HSTREAM             streamHandle;
+    bool                saveFile;
     HRECORD             micHandle;
     bool                recording; //false if not current recording, true if recording
 
@@ -60,6 +61,7 @@ private:
         void pushToTalkButtonPressed();
         void pushToTalkButtonReleased();
         void saveToFileCheckboxHandler();
+        int  multicastSwitch();
 };
 
 #endif // COMMAUDIO_H

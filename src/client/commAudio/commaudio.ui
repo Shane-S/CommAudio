@@ -524,6 +524,9 @@
    </property>
   </action>
   <action name="actionNormal_Radio">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Normal Radio</string>
    </property>
@@ -667,6 +670,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionMulticast_Radio_2</sender>
+   <signal>triggered()</signal>
+   <receiver>commAudioClass</receiver>
+   <slot>multicastSwitch()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>385</x>
+     <y>294</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>newConnectDialog()</slot>
@@ -676,5 +695,6 @@
   <slot>pushToTalkButtonPressed()</slot>
   <slot>pushToTalkButtonReleased()</slot>
   <slot>saveToFileCheckboxHandler()</slot>
+  <slot>multicastSwitch()</slot>
  </slots>
 </ui>

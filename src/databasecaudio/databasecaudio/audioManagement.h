@@ -18,14 +18,15 @@
 #include <vector>
 #include <cstdint>
 #include <list>
+#include <thread>
 
-#define sRate 44100
+#define sRate			44100
 #define SERVER_TCP_PORT 7000
+#define SERVER_UDP_PORT	7001
 #define BUFSIZE         4096
 #define TIMECAST_ADDR   "234.5.6.7"
 #define TIMECAST_PORT   7001
 #define MAXADDRSTR		16
-#define RECBUF			2048
 
 typedef struct connectionStruct
 {
@@ -33,15 +34,14 @@ typedef struct connectionStruct
 	SOCKADDR_IN toAddr;
 } connectionStruct;
 
-void tcpTestClient();
-void udpClient(); // doesnt quite work
-void udpServer(); // neither does this
-int multicastClient();
+void udpClient(); 
+int multicastServer(const char * dir);
 void recordAudio(SOCKET socket, SOCKADDR_IN toAddr);
-int testMulticastServer(const char * dir);
-void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket, SOCKADDR_IN * toAddr);
-void sendAudioData(const char *data, bool isTCP, bool isFile, SOCKET socket);
-void tcpTestServer(const char * dir);
+void sendAudioDataUDP(const char * filename, SOCKET socket, SOCKADDR_IN * toAddr);
+void sendAudioData(const char *data, SOCKET socket);
+void tcpServer(const char * dir);
+void udpServer(SOCKET sock);
+
 using std::cout; using std::endl; using std::string;
 
 #endif

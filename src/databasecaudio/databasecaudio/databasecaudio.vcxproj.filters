@@ -30,13 +30,10 @@
     <ClCompile Include="SongData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="tcp.cpp">
+    <ClCompile Include="broadcasting.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="udp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="multicast.cpp">
+    <ClCompile Include="audioFunctions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

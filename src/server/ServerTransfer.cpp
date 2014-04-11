@@ -1,5 +1,8 @@
 #include "ServerTransfer.h"
 
+using std::vector;
+using std::string;
+
 /** 
  * Contains definitions of all functions for the server side.
  * 
@@ -19,9 +22,50 @@
  * @file ServerTransfer.cpp
  */
 
-static DWORD	recvd	= 0;	// The number of bytes or packets received
-static HANDLE	destFile = 0;	// A file to store the transferred data (if specified by the user)
-LPFN_ACCEPTEX   AcceptPtr;
+LPFN_ACCEPTEX             AcceptPtr;                // Pointer to the AcceptEx function
+LPFN_GETACCEPTEXSOCKADDRS GetAcceptExSockaddrsPtr;  // Pointer to the GetAcceptExSockaddrs function
+WSABUF                    nameWsaBuf;				// Holds a newly connected client's name
+vector<ClientStruct>      clientList;				// 
+int                       lastClient;
+
+/**
+ * Gets function pointers to the extended windows sockets functions allowing overlapped accept calls.
+ *
+ * Microsoft, in their infinite wisdom, decided that the extended socket functions would be retrieved at runtime
+ * from the DLL. This isn't so bad in itself, but they could have made a dedicated function instead of shoe-horning
+ * it into WSAIoctl. This function creates a fake socket, uses WSAIoctl to get the function pointers, then closes the
+ * socket, having used it for precisely nothing.
+ *
+ * @return Whether the function succeeded.
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @date     April 10th, 2014
+ */
+BOOL ServerInitExtendedFuncs()
+{
+	GUID  acceptID    = WSAID_ACCEPTEX;
+	GUID  getAcceptID = WSAID_GETACCEPTEXSOCKADDRS;
+	DWORD bytesRecvd;
+	SOCKET fakeSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
+
+	if (WSAIoctl(fakeSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &acceptID, sizeof(acceptID), &AcceptPtr, sizeof(AcceptPtr), &bytesRecvd,
+		NULL, NULL) == INVALID_SOCKET)
+	{
+		int err = GetLastError();
+		MessageBox(NULL, TEXT("OH YEAHHH"), TEXT("Oh no! Ohh nooo! OH NO!"), MB_ICONERROR);
+		return FALSE;
+	}
+
+	if(WSAIoctl(fakeSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &getAcceptID, sizeof(getAcceptID), &GetAcceptExSockaddrsPtr,
+		sizeof(GetAcceptExSockaddrsPtr), &bytesRecvd, NULL, NULL) == INVALID_SOCKET)
+	{
+		MessageBox(NULL, TEXT("OH YEAHHH"), TEXT("Oh no! Ohh nooo! OH NO!"), MB_ICONERROR);
+		return FALSE;
+	}
+
+	closesocket(fakeSock);
+	return TRUE;
+}
 
 /**
  * Initialises a TCP or UDP socket for use by the server.
@@ -36,6 +80,7 @@ BOOL ServerInitSocket(LPTransferProps props)
 	BOOL set = TRUE;
 
 	props->paddr_in->sin_addr.s_addr = htonl(INADDR_ANY);
+	props->paddr_in->sin_port = htons(7000);
 
 	if (s == INVALID_SOCKET)
 	{
@@ -66,27 +111,71 @@ DWORD WINAPI Serve(VOID *pProps)
 	LPTransferProps props = (LPTransferProps)pProps;
 	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
 	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
-	WSAEVENT        hEvent      = CreateEvent(NULL, 0, 0, TEXT("AcceptExEvt"));
-	LPSOCKADDR_IN   client		= (LPSOCKADDR_IN)malloc(sizeof(SOCKADDR_IN));
+	WSAOVERLAPPED   fakeOvr;
+	WSAEVENT        hEvents[] = { CreateEvent(NULL, FALSE, FALSE, TEXT("AcceptExEvt")) };
 	SOCKET			listenSock	= props->socket;
-	SOCKET			acceptSock  = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
-	GUID            acceptID    = WSAID_ACCEPTEX;
-
-	WSAIoctl(listenSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &acceptID, sizeof(acceptID), &AcceptPtr, sizeof(AcceptPtr), &bytesRecvd,
-		NULL, NULL);
+	SOCKET			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
+	DWORD			flagsAreSeriouslyStupid = 0;
 
 	memset(ovr, 0, sizeof(WSAOVERLAPPED));
-	ovr->hEvent = hEvent;
+	memset(&fakeOvr, 0, sizeof(WSAOVERLAPPED));
+	ovr->hEvent = hEvents[0];
 
 	listen(listenSock, 5);
 
 	OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
-	WSAWaitForMultipleEvents(1, &ovr->hEvent, FALSE, INFINITE, TRUE);
-	MessageBox(NULL, TEXT("Accepted client!"), TEXT("ACCEPT THIS BITCH"), MB_OK);
-	//closesocket(props->socket);
+	while (1)
+	{
+		int evt = WSAWaitForMultipleEvents(1, hEvents, FALSE, WSA_INFINITE, TRUE);
+		if (evt == WSA_WAIT_EVENT_0) // Accepted a client
+		{
+			sockaddr_in clientAddr;
+			uint32_t nameLen;
+			ClientStruct newClient;
+
+			free(nameWsaBuf.buf); // Free the buffer containing the previous name
+
+			// Get the results from acceptex and assign them to a new client object in the list
+			GetAcceptResults(out_buf, &nameLen, &clientAddr);
+			newClient.client = new Client;
+
+			memset(&newClient.fakeOvr, 0, sizeof(WSAOVERLAPPED));
+			newClient.client->setAddr(clientAddr).setSock(acceptSock);
+
+			clientList.push_back(newClient);
+
+			nameWsaBuf.buf = (char *)malloc(nameLen);
+			nameWsaBuf.len = nameLen;
+
+			auto it = clientList.end();
+			it--;
+
+			WSARecv(acceptSock, &nameWsaBuf, 1, NULL, &flagsAreSeriouslyStupid, (LPOVERLAPPED)&(*it) , RecvNameCompletion);
+
+			int err = GetLastError();
+			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
+			OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
+		}
+	}
 
 	ServerCleanup(props);
 	return 0;
+}
+
+
+/**
+ *
+ */
+VOID CALLBACK RecvNameCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped,
+	DWORD dwFlags)
+{
+	ClientStruct *clnt = (ClientStruct *)lpOverlapped;
+	Client *clientPtr = clnt->client;
+	string newName(nameWsaBuf.buf, nameWsaBuf.len);
+	
+	clientPtr->setName(newName);
+	fprintf(stderr, "Accepted client with address %s and name %s\n", inet_ntoa(clientPtr->getAddr().sin_addr), 
+		clientPtr->getName().c_str());
 }
 
 /**
@@ -96,10 +185,10 @@ DWORD WINAPI Serve(VOID *pProps)
  */
 VOID ServerCleanup(LPTransferProps props)
 {
-	recvd = 0;
-	if (destFile)
-		CloseHandle(destFile);
-	destFile = 0;
+	//recvd = 0;
+	//if (destFile)
+	//	CloseHandle(destFile);
+	//destFile = 0;
 }
 
 /**
@@ -156,5 +245,42 @@ INT OverlappedAccept(SOCKET listenSocket, SOCKET newSock, PVOID lpNameLen, DWORD
 	else if (error == WSA_IO_PENDING)
 		return 0;
 
+	return 1;
+}
+
+/**
+ * Gets the relevant results an AcceptEx call.
+ *
+ * Retrives the data sent by the client and the client's sockaddr_in from the result buffer.
+ *
+ * @param resultBuf  The buffer containing the results from AcceptEx.
+ * @param nameLen    Receives the client's name's length.
+ * @param clientInfo Receives sockaddr_in information for the client.
+ * @return Whether the call succeeded (0 or 1).
+ *
+ * @designer Shane Spoor
+ * @author   Shane Spoor
+ * @date     April 10th, 2014
+ */
+INT GetAcceptResults(void *resultBuf, uint32_t *nameLen, sockaddr_in *clientInfo)
+{
+	sockaddr_in *clientAddr = NULL;
+	sockaddr_in *serverAddr = NULL;
+	uint8_t *something;
+	int clientLen;
+	int serverLen;
+	int bufLen = sizeof(int)+((sizeof(SOCKADDR_IN)+16) * 2);
+
+	memcpy(nameLen, resultBuf, sizeof(uint32_t)); // Copy the name length into the variable passed in
+	GetAcceptExSockaddrsPtr(resultBuf,
+							bufLen - ((sizeof(SOCKADDR_IN)+16) * 2),
+							sizeof(sockaddr_in) + 16,
+							sizeof(sockaddr_in) + 16, 
+							(sockaddr **)&serverAddr, 
+							&serverLen,
+							(sockaddr **)&clientAddr, 
+							&clientLen);
+	something = (uint8_t *)resultBuf;
+	memcpy(clientInfo, clientAddr, sizeof(sockaddr_in));
 	return 1;
 }

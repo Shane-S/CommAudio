@@ -1,6 +1,7 @@
 #include "ServerTransfer.h"
 #include "Client.h"
 #include "ServerInfo.h"
+#include "Unicast.h"
 
 using std::vector;
 using std::string;
@@ -29,11 +30,12 @@ extern std::unique_ptr<AudioLibrary> lib;
 LPFN_ACCEPTEX             AcceptPtr;                // Pointer to the AcceptEx function
 LPFN_GETACCEPTEXSOCKADDRS GetAcceptExSockaddrsPtr;  // Pointer to the GetAcceptExSockaddrs function
 WSABUF                    nameWsaBuf;				// Holds a newly connected client's name
-vector<ClientStruct>      clientList;				// 
-int                       lastClient;
+vector<ClientStruct>      clientList;
 HSTREAM                   streamBuffer;
 HSTREAM				      streamBuffer2;
-
+char                      micBuffer[4096];
+WSABUF                    wsaMicBuffer;
+SOCKADDR_IN               recvdMic;
 /**
  * Gets function pointers to the extended windows sockets functions allowing overlapped accept calls.
  *
@@ -83,11 +85,12 @@ DWORD WINAPI Serve()
 {
 	DWORD           bytesRecvd;
 	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
-	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
 	ServerInfo      serve(7000, 7001);
 	WSAEVENT        hEvents[] = { serve.getEvent() };
 	SOCKET			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	DWORD			flagsAreSeriouslyStupid = 0;
+	DWORD           dwBytes = 0;
+	int             len = sizeof(SOCKADDR_IN);
 
 	char streamDataBuffer[2048];
 	DWORD readLength = 0;
@@ -103,10 +106,6 @@ DWORD WINAPI Serve()
 	multicastAddr.sin_family = AF_INET;
 
 	memset(&buffer, 0, sizeof(WSABUF));
-	memset(ovr, 0, sizeof(WSAOVERLAPPED));
-	ovr->hEvent = hEvents[0];
-
-	listen(serve.getTCPListen(), 5);
 
 	streamBuffer = BASS_StreamCreateFile(FALSE, lib->songList[0].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
 	streamBuffer2 = BASS_StreamCreateFile(FALSE, lib->songList[112].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
@@ -115,7 +114,16 @@ DWORD WINAPI Serve()
 	buffer.len = readLength;
 	buffer.buf = streamDataBuffer;
 
+	wsaMicBuffer.buf = micBuffer;
+	wsaMicBuffer.len = 4096;
+
+	recvdMic.sin_port = htons(7001);
+	recvdMic.sin_family = AF_INET;
+	recvdMic.sin_addr.s_addr = htonl(INADDR_ANY);
+
 	int err = BASS_ErrorGetCode();
+
+	listen(serve.getTCPListen(), 5);
 
 	WSASendTo(serve.getUDPMulticast(), &buffer, 1, NULL, 0, (const sockaddr *)&multicastAddr, sizeof(multicastAddr), (LPWSAOVERLAPPED)&serve, MulticastSendComplete);
 	int error = WSAGetLastError();
@@ -123,6 +131,7 @@ DWORD WINAPI Serve()
 	while (1)
 	{
 		int evt = WSAWaitForMultipleEvents(1, hEvents, FALSE, WSA_INFINITE, TRUE);
+		int error = WSAGetLastError();
 		if (evt == WSA_WAIT_EVENT_0) // Accepted a client
 		{
 			sockaddr_in clientAddr;
@@ -136,7 +145,7 @@ DWORD WINAPI Serve()
 			newClient.client = new Client;
 
 			memset(&newClient.fakeOvr, 0, sizeof(WSAOVERLAPPED));
-			newClient.client->setAddr(clientAddr).setSock(acceptSock);
+			newClient.client->setAddr(clientAddr).setSock(acceptSock).setUdpSock(serve.getUDPListen());
 
 			clientList.push_back(newClient);
 
@@ -147,10 +156,10 @@ DWORD WINAPI Serve()
 			it--;
 
 			WSARecv(acceptSock, &nameWsaBuf, 1, NULL, &flagsAreSeriouslyStupid, (LPOVERLAPPED)&(*it) , RecvNameCompletion);
-
-			int err = GetLastError();
+			WSARecvFrom(newClient.client->getUdpSock(), &wsaMicBuffer, 1, NULL, &dwBytes, (SOCKADDR *)&recvdMic, &len, (LPOVERLAPPED)&newClient, VoiceDataRecv);
+			int err = WSAGetLastError();
 			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
-			OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
+			OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, (LPOVERLAPPED)&serve);
 		}
 	}
 	return 0;
@@ -164,7 +173,7 @@ VOID CALLBACK RecvNameCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
 	DWORD dwFlags)
 {
 	char streamDataBuffer[BUFSIZE];
-	DWORD readLength = 0;
+  	DWORD readLength = 0;
 	DWORD SendBytes = 0;
 
 	ClientStruct *clnt = (ClientStruct *)lpOverlapped;
@@ -230,6 +239,7 @@ INT OverlappedAccept(SOCKET listenSocket, SOCKET newSock, PVOID lpNameLen, DWORD
 	if (!AcceptPtr(listenSocket, newSock, lpNameLen, dwRecvDataLen, sizeof(sockaddr_in)+16, sizeof(sockaddr_in)+16,
 		lpdwBytesReceived, lpOverlapped) && ((error = WSAGetLastError()) != WSA_IO_PENDING))
 	{
+
 		TCHAR message[128] = { 0 };
 		_tcprintf_s(message, TEXT("%s, error number %d."), TEXT("Error accepting socket"), error);
 		LogError(TEXT("OverlappedAccept"), message);
@@ -259,21 +269,18 @@ INT GetAcceptResults(void *resultBuf, uint32_t *nameLen, sockaddr_in *clientInfo
 {
 	sockaddr_in *clientAddr = NULL;
 	sockaddr_in *serverAddr = NULL;
-	uint8_t *something;
 	int clientLen;
 	int serverLen;
-	int bufLen = sizeof(int)+((sizeof(SOCKADDR_IN)+16) * 2);
 
 	memcpy(nameLen, resultBuf, sizeof(uint32_t)); // Copy the name length into the variable passed in
 	GetAcceptExSockaddrsPtr(resultBuf,
-							bufLen - ((sizeof(SOCKADDR_IN)+16) * 2),
+							4,
 							sizeof(sockaddr_in) + 16,
 							sizeof(sockaddr_in) + 16, 
 							(sockaddr **)&serverAddr, 
 							&serverLen,
 							(sockaddr **)&clientAddr, 
 							&clientLen);
-	something = (uint8_t *)resultBuf;
 	memcpy(clientInfo, clientAddr, sizeof(sockaddr_in));
 	return 1;
 }

@@ -1,7 +1,6 @@
 #ifndef ASSN2_UTILS
 #define ASSN2_UTILS
 
-#include "TransferProps.h"
 #include <Windows.h>
 #include <tchar.h>
 #include <cstdio>

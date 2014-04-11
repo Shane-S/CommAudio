@@ -28,10 +28,27 @@ SOCKADDR_IN Client::getAddr() const
 	return addr_;
 }
 
-
+/**
+ * 
+ *
+ *
+ *
+ */
 SOCKET Client::getSock() const
 {
 	return tcpSock_;
+}
+
+/**
+ * 
+ *
+ *
+ *
+ *
+ */
+SOCKET Client::getUdpSock() const
+{
+	return udpSock_;
 }
 
 /**
@@ -79,6 +96,17 @@ Client& Client::setAddr(const SOCKADDR_IN &newAddr)
 Client& Client::setSock(const SOCKET &newSock)
 {
 	tcpSock_ = newSock;
+	return *this;
+}
+
+/**
+ * Set the UDP socket for sending and receiving microphone data.
+ *
+ * @param udpSock The UDP socket 
+ */
+Client& Client::setUdpSock(const SOCKET& udpSock)
+{
+	udpSock_ = udpSock;
 	return *this;
 }
 

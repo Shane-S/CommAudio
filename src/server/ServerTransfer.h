@@ -14,7 +14,6 @@
 #include <cstdint>
 #include "ahm.h"
 #include "audioManagement.h"
-#include "../TransferProps.h"
 #include "../Utils.h"
 
 #define UDP_MAXPACKET	65000	/**< The maximum UDP datagram size */

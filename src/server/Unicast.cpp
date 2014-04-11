@@ -11,6 +11,9 @@
 
 extern std::unique_ptr<AudioLibrary> lib;
 extern HSTREAM streamBuffer;
+extern WSABUF  wsaMicBuffer;
+extern SOCKADDR_IN recvdMic;
+int flagthing;
 
 /**
 * Receives and delegates file streaming commands from clients.
@@ -58,6 +61,7 @@ VOID CALLBACK UnicastGeneralRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
  *
  * @designer Shane Spoor
  * @author   Shane Spoor
+ * @date     April 11th, 2014
  */
 VOID CALLBACK UnicastFileSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
 {
@@ -102,7 +106,22 @@ VOID CALLBACK SearchResultsSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfer
  *
  *
  */
-VOID CALLBACK VoiceDataRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags);
+VOID CALLBACK VoiceDataRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
+{
+	ClientStruct *clientStr = (ClientStruct *)lpOverlapped;
+	Client *client = clientStr->client;
+
+	if (dwErrorCode)
+	{
+		fprintf(stderr, "Lol what\n");
+		return;
+	}
+
+	SOCKET udpSock = client->getUdpSock();
+
+	WSASendTo(udpSock, &wsaMicBuffer, 1, NULL, 0, (const sockaddr *)&(client->getAddr()), sizeof(SOCKADDR_IN), (LPOVERLAPPED)&client,
+		VoiceDataSend);
+}
 
 /**
  *
@@ -113,4 +132,12 @@ VOID CALLBACK VoiceDataRecv(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, 
  *
  *
  */
-VOID CALLBACK VoiceDataSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags);
+VOID CALLBACK VoiceDataSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped, DWORD dwFlags)
+{
+	ClientStruct *clientStr = (ClientStruct*)lpOverlapped;
+	Client *client = clientStr->client;
+
+
+	WSARecvFrom(client->getUdpSock(), &wsaMicBuffer, 1, NULL, (DWORD *)&flagthing, (sockaddr*)&recvdMic, &flagthing, (LPOVERLAPPED)client, VoiceDataRecv);
+	return;
+}

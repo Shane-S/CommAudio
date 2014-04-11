@@ -48,7 +48,7 @@ int main()
 	WSAStartup(MAKEWORD(2, 2), &data);
 
 	memset(&winSock, 0, sizeof(SOCKADDR_IN));
-	winSock.sin_addr.s_addr = inet_addr("192.168.0.94");
+	winSock.sin_addr.s_addr = inet_addr("192.168.0.48");
 	winSock.sin_port = htons(7000);
 	winSock.sin_family = AF_INET;
 	

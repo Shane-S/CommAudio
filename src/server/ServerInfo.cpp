@@ -15,7 +15,7 @@ using std::string;
 ServerInfo::ServerInfo(const short tcpPort, const short udpPort)
 : fakeOvr(), acceptOvr(), listenSocket(0), udpListenSock(0), udpMulticast(0), dataBuffer(), clientList()
 {
-	WSAEVENT    hEvent = WSACreateEvent();
+	WSAEVENT    hEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("AcceptEx"));;
 	SOCKADDR_IN paddr_in;
 	struct ip_mreq stMreq;
 
@@ -60,7 +60,6 @@ ServerInfo::ServerInfo(const short tcpPort, const short udpPort)
 	if (udpMulticast == INVALID_SOCKET)
 		throw "ServerInfo::ServerInfo: Couldn't make udpMulticast";
 
-	paddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
 	paddr_in.sin_port        = 0;
 	if (bind(udpMulticast, (struct sockaddr*) &paddr_in, sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
 		throw "ServerInfo::ServerInfo: Coudln't bind udpMulticast socket.";

@@ -39,6 +39,10 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
 
     if(recvMessage->message == WM_SOCKET)
     {
+        if (WSAGETSELECTERROR(recvMessage->lParam))
+        {
+            WORD lol = HIWORD(recvMessage->lParam);
+        }
         switch(WSAGETSELECTEVENT(recvMessage->lParam))
         {
             case FD_READ:
@@ -51,8 +55,16 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
                 audioStruct->buffer.len = 2048;
                 audioStruct->buffer.buf = (char *) malloc(audioStruct->buffer.len);
 
-                int err = WSARecv(clientNetwork.getTCPSocket(), &audioStruct->buffer, 1, &bytesReceived, &flags, (LPOVERLAPPED)audioStruct, getAudioDataCallback);
-                
+                if(recvMessage->wParam == clientNetwork.getTCPSocket())
+                {
+                    int err = WSARecv(clientNetwork.getTCPSocket(), &audioStruct->buffer, 1, &bytesReceived, &flags, (LPOVERLAPPED)audioStruct, getAudioDataCallback);
+                }
+                else if (recvMessage->wParam == clientNetwork.getUDPSocket())
+                {
+                    int sizeOf = sizeof(clientNetwork.getUDPSockAddr());
+                    int err = WSARecvFrom(clientNetwork.getUDPSocket(), &audioStruct->buffer, 1, &bytesReceived, &flags, (sockaddr *)&clientNetwork.getUDPSockAddr(), &sizeOf, (LPOVERLAPPED)audioStruct, getAudioDataCallback);
+                    err = WSAGetLastError();
+                }
                 break;
             }
             case FD_WRITE:

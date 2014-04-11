@@ -151,7 +151,7 @@ int ClientNetwork::initUDPClient()
 
     memset((char *)&client, 0, sizeof(struct sockaddr_in));
     client.sin_family = AF_INET;
-    client.sin_port = htons(0); //bind to any available port
+    client.sin_port = htons(connectionSettings.getPortUDP()); //bind to any available port
     client.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if(bind(serverUDPSocket, (struct sockaddr *)&client, sizeof(client)) < 0)
@@ -159,7 +159,10 @@ int ClientNetwork::initUDPClient()
         return -3; //couldn't bind name to socket
     }
 
-    WSAAsyncSelect(serverUDPSocket, hwnd, WM_SOCKET, FD_READ | FD_WRITE | FD_CLOSE); 
+    int err = WSAGetLastError();
+
+    err = WSAAsyncSelect(serverUDPSocket, hwnd, WM_SOCKET, FD_READ | FD_WRITE);
+    err = WSAGetLastError();
     serverUDPAddr = server;
 
     return 0; //UDP client successfully initialized

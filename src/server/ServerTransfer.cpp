@@ -92,7 +92,7 @@ DWORD WINAPI Serve()
 	DWORD           dwBytes = 0;
 	int             len = sizeof(SOCKADDR_IN);
 
-	char streamDataBuffer[2048];
+	char streamDataBuffer[4096];
 	DWORD readLength = 0;
 	DWORD SendBytes = 0;
 	DWORD BytesTransferred = 0;
@@ -110,7 +110,7 @@ DWORD WINAPI Serve()
 	streamBuffer = BASS_StreamCreateFile(FALSE, lib->songList[0].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
 	streamBuffer2 = BASS_StreamCreateFile(FALSE, lib->songList[112].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
 
-	readLength = BASS_ChannelGetData(streamBuffer2, streamDataBuffer, 2048);
+	readLength = BASS_ChannelGetData(streamBuffer2, streamDataBuffer, 4096);
 	buffer.len = readLength;
 	buffer.buf = streamDataBuffer;
 
@@ -157,7 +157,7 @@ DWORD WINAPI Serve()
 
 			WSARecv(acceptSock, &nameWsaBuf, 1, NULL, &flagsAreSeriouslyStupid, (LPOVERLAPPED)&(*it) , RecvNameCompletion);
 			WSARecvFrom(newClient.client->getUdpSock(), &wsaMicBuffer, 1, NULL, &dwBytes, (SOCKADDR *)&recvdMic, &len, (LPOVERLAPPED)&newClient, VoiceDataRecv);
-			int err = WSAGetLastError();
+			int err = GetLastError();
 			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
 			OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, (LPOVERLAPPED)&serve);
 		}
@@ -192,7 +192,7 @@ VOID CALLBACK RecvNameCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
 	buffer->len = BUFSIZE;
 	buffer->buf = streamDataBuffer;
 
-	WSASend(clientPtr->getSock(), buffer, 1, NULL, 0, &clnt->fakeOvr, UnicastFileSend);
+	//WSASend(clientPtr->getSock(), buffer, 1, NULL, 0, &clnt->fakeOvr, UnicastFileSend);
 }
 
 /**

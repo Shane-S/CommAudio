@@ -10,7 +10,7 @@ int main(void)
 {
 	cout << "Reading library in.." << endl;
 	
-	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\RazLT\\Music\\"), string(",mp3,"), 1, 10)); 
+	std::unique_ptr<AudioLibrary> lib(new AudioLibrary(string("C:\\Users\\Shane\\Music\\"), string(",mp3,"), 1, 10000)); 
 	
 	for(int i = 0; i < lib->numsongs; i++)
 	{
@@ -144,7 +144,6 @@ void sendAudioData(const char * filename, bool isTCP, bool isFile, SOCKET socket
     ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     
     streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
-	  streamBuffer = BASS_StreamCreateFile(FALSE, filename, 0, 0, BASS_STREAM_DECODE);
 	int opo = BASS_ErrorGetCode();
 
 	BASS_SAMPLE * bInfo;

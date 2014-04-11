@@ -66,7 +66,6 @@ VOID CALLBACK UnicastFileSend(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered
 	DWORD			bytesRead;
 	if (dwErrorCode) //|| dwNumberOfBytesTransfered != props->dataBuffer.len) // error or didn't send everything
 	{
-		char err_buf[8];
 		props->transferCancelled = TRUE;
 		return;
 	}

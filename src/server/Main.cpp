@@ -18,6 +18,7 @@
 -------------------------------------------------------------------------------------------------------------------------*/
 
 #include "Main.h"
+#include "../bass.h"
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: WinMain
@@ -42,9 +43,13 @@
 int main(int argc, char *argv[])
 {
 	WSADATA	wsaData;
+	HSTREAM stream;
 	LPTransferProps props = CreateTransferProps();
-	
+
+	BASS_Init(-1, 44100, 0, 0, NULL);
+
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
+	ServerInitExtendedFuncs();
 	ServerInitSocket(props);
 	Serve(props);
 

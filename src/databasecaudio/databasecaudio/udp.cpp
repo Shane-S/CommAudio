@@ -7,7 +7,7 @@ char glbBuffer[100000];
 int buflen = 0;
 int curpos = 0;
 
-char * ipudp = "192.168.0.63";
+char * ipudp = "192.168.0.95";
 
 /* SENDS AUDIO DATA OVER UDP */
 void sendAudioDataUDP(const char * filename, bool isTCP, bool isFile, SOCKET socket, SOCKADDR_IN * toAddr)

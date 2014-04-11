@@ -150,12 +150,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="broadcasting.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="audioLibrary.cpp" />
-    <ClCompile Include="multicast.cpp" />
     <ClCompile Include="SongData.cpp" />
-    <ClCompile Include="tcp.cpp" />
-    <ClCompile Include="udp.cpp" />
+    <ClCompile Include="audioFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ahm.h" />

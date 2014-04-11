@@ -8,6 +8,8 @@
 #include <Windows.h>
 
 #define WM_SOCKET   (WM_USER + 1)
+#define AUDIO_BUFFER_LENGTH 2048
+#define SLEEP_DURATION  5
 
 #include "ui_commaudio.h"
 #include "ClientNetwork.h"
@@ -37,6 +39,8 @@ private:
     ClientNetwork       clientNetwork;
     ConnectionSettings  connectionSettings;
     int                 playerState; //0 = paused; 1 = playing
+    bool                connected;
+    int                 checkHandshake;
     HSTREAM             streamHandle;
     HRECORD             micHandle;
     bool                recording; //false if not current recording, true if recording

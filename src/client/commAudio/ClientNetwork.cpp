@@ -78,7 +78,7 @@ int ClientNetwork::connectToTCPServer()
     struct sockaddr_in server;
     struct hostent *hp;
 
-    if((serverTCPSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED)) == INVALID_SOCKET)
+    if((serverTCPSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, 0)) == INVALID_SOCKET)
     {
         return -1; //error creating socket
     }
@@ -96,9 +96,10 @@ int ClientNetwork::connectToTCPServer()
     //Copy server addr
     memcpy((char *)&server.sin_addr, hp->h_addr, hp->h_length);
 
-    WSAAsyncSelect(serverTCPSocket, hwnd, WM_SOCKET, FD_READ | FD_CLOSE); 
+    WSAAsyncSelect(serverTCPSocket, hwnd, WM_SOCKET, FD_READ | FD_WRITE | FD_CLOSE); 
     if(connect(serverTCPSocket, (struct sockaddr *)&server, sizeof(server)) == -1)
     {
+        int err = WSAGetLastError();
         return -3; //couldn't connect to server
     }
 
@@ -131,7 +132,7 @@ int ClientNetwork::initUDPClient()
     struct sockaddr_in server, client;
     struct hostent *hp;
 
-    if((serverUDPSocket = WSASocket(PF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED)) == INVALID_SOCKET)
+    if((serverUDPSocket = WSASocket(PF_INET, SOCK_DGRAM, 0, NULL, 0, 0)) == INVALID_SOCKET)
     {
         return -1; //error creating socket
     }
@@ -158,6 +159,7 @@ int ClientNetwork::initUDPClient()
         return -3; //couldn't bind name to socket
     }
 
+    WSAAsyncSelect(serverUDPSocket, hwnd, WM_SOCKET, FD_READ | FD_WRITE | FD_CLOSE); 
     serverUDPAddr = server;
 
     return 0; //UDP client successfully initialized
@@ -190,9 +192,6 @@ void ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
     DWORD SendBytes = 0;
     DWORD BytesTransferred = 0;
     WSABUF buffer;
-
-    WSAOVERLAPPED ov;
-    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     
     if(isFile) //not streaming from memory
     {
@@ -218,15 +217,14 @@ void ClientNetwork::sendAudioData(void *data, bool isTCP, bool isFile)
         if(!isTCP)
         {
             //UDP
-            WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), &ov, 0);
+            WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), 0, 0);
         }
         else
         {
             //TCP
-            WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, &ov, NULL);
+            WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, 0, NULL);
         }
 
-        ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     }
 }
 
@@ -236,9 +234,6 @@ void ClientNetwork::sendMicData(HRECORD micHandle)
     DWORD SendBytes = 0;
     DWORD BytesTransferred = 0;
     WSABUF buffer;
-
-    WSAOVERLAPPED ov;
-    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     
     while(BASS_ChannelIsActive(micHandle))
     {
@@ -248,9 +243,8 @@ void ClientNetwork::sendMicData(HRECORD micHandle)
         buffer.buf = streamDataBuffer;
 
         //UDP
-        int err = WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), &ov, 0);
+        int err = WSASendTo(serverUDPSocket, &buffer, 1, &SendBytes, 0, (const sockaddr *)&serverUDPAddr, sizeof(serverUDPAddr), 0, 0);
 
-        ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
     }
 }
 
@@ -259,15 +253,21 @@ void ClientNetwork::sendPing()
     DWORD SendBytes = 0;
     DWORD BytesTransferred = 0;
     WSABUF buffer;
-    buffer.len = sizeof(char);
-    buffer.buf = (char *) "This is a fucking test";
-    WSAOVERLAPPED ov;
-    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
-  
-    //TCP
-    WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, &ov, NULL);
+    int len = 8;
+    buffer.len = 4;
+    buffer.buf = (char *)&len;
 
-    ZeroMemory(&ov, sizeof(WSAOVERLAPPED));
+    WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, 0, NULL);
+    int err = WSAGetLastError();
+    
+    std::string usernameStr = connectionSettings.getUsername();
+
+    buffer.len = usernameStr.size();
+    buffer.buf = (char *)malloc(buffer.len);
+    memcpy(buffer.buf, usernameStr.c_str(), buffer.len);
+  
+    WSASend(serverTCPSocket, &buffer, 1, &SendBytes, 0, 0, NULL);
+    err = WSAGetLastError();
 }
 
 //use when receving audio data from server - can use same code on the server

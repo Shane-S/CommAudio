@@ -8,6 +8,8 @@ commAudio::commAudio(QWidget *parent)
     
     playerState = 0; //start player in paused state
     recording = false;
+    connected = false;
+    checkHandshake = 0;
 
     BASS_Init(-1, 44100, 0, 0, NULL);
     BASS_RecordInit(-1);
@@ -51,8 +53,21 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
 
                 break;
             }
+            case FD_WRITE:
+            {
+                connected = true;
+                
+                if(checkHandshake == 0)
+                {
+                    clientNetwork.sendPing();
+                    checkHandshake = 1;
+                }
+                break;
+            }
             case FD_CLOSE:
             {
+                connected = false;
+                checkHandshake = 0;
                 break;
             }
         }
@@ -75,12 +90,14 @@ BOOL CALLBACK MyRecordProc(HRECORD handle, const void *buffer, DWORD length, voi
 	int pos = 0;
 	while(length > pos)
 	{
-		WSbuffer.len = 1024;
+		WSbuffer.len = AUDIO_BUFFER_LENGTH;
 		WSbuffer.buf = (char*)buf + pos;
 
         err = WSASendTo(cStruct->UDPSocket , &WSbuffer, 1, &SendBytes, 0, (sockaddr*)&cStruct->UDPSockAddr , sizeof(cStruct->UDPSockAddr), NULL, NULL);
 
-		pos += 1024;
+		pos += AUDIO_BUFFER_LENGTH;
+
+        Sleep(SLEEP_DURATION);
 	}
     return true; // continue recording
 }
@@ -99,7 +116,6 @@ void commAudio::newConnectDialog()
     clientNetwork.initWinsock();
     clientNetwork.connectToTCPServer();
     clientNetwork.initUDPClient();
-    //clientNetwork.sendPing();
 
     streamHandle = BASS_StreamCreate(44100, 2, 0, STREAMPROC_PUSH, 0);
     

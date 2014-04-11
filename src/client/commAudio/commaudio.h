@@ -8,7 +8,8 @@
 #include <Windows.h>
 
 #define WM_SOCKET   (WM_USER + 1)
-#define AUDIO_BUFFER_LENGTH 4096
+#define AUDIO_BUFFER_LENGTH 4096 //for mic
+#define STREAM_BUFFER_LENGTH 2048 //for audio streaming
 
 #include "ui_commaudio.h"
 #include "ClientNetwork.h"

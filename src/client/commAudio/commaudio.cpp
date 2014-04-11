@@ -52,15 +52,17 @@ bool commAudio::nativeEvent(const QByteArray &eventType, void *message, long *re
                 PAUDIORECEIVESTRUCT audioStruct = (PAUDIORECEIVESTRUCT) malloc(sizeof(PAUDIORECEIVESTRUCT));
                 memset(&audioStruct->fakeOverlapped, 0, sizeof(WSAOVERLAPPED));
                 audioStruct->streamH = streamHandle;
-                audioStruct->buffer.len = 2048;
-                audioStruct->buffer.buf = (char *) malloc(audioStruct->buffer.len);
 
                 if(recvMessage->wParam == clientNetwork.getTCPSocket())
                 {
+                    audioStruct->buffer.len = STREAM_BUFFER_LENGTH;
+                    audioStruct->buffer.buf = (char *) malloc(audioStruct->buffer.len);
                     int err = WSARecv(clientNetwork.getTCPSocket(), &audioStruct->buffer, 1, &bytesReceived, &flags, (LPOVERLAPPED)audioStruct, getAudioDataCallback);
                 }
                 else if (recvMessage->wParam == clientNetwork.getUDPSocket())
                 {
+                    audioStruct->buffer.len = AUDIO_BUFFER_LENGTH;
+                    audioStruct->buffer.buf = (char *) malloc(audioStruct->buffer.len);
                     int sizeOf = sizeof(clientNetwork.getUDPSockAddr());
                     int err = WSARecvFrom(clientNetwork.getUDPSocket(), &audioStruct->buffer, 1, &bytesReceived, &flags, (sockaddr *)&clientNetwork.getUDPSockAddr(), &sizeOf, (LPOVERLAPPED)audioStruct, getAudioDataCallback);
                     err = WSAGetLastError();

@@ -23,6 +23,7 @@
 	strcpy_s(dest, src, bufsize)
 #endif
 
+
 int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ...);
 VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, HWND hwnd);
 VOID CreateTimestamp(char *buf, SYSTEMTIME *time);

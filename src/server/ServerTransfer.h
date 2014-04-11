@@ -16,15 +16,8 @@
 #include "audioManagement.h"
 #include "../TransferProps.h"
 #include "../Utils.h"
-#include "Client.h"
 
 #define UDP_MAXPACKET	65000	/**< The maximum UDP datagram size */
-
-struct ClientStruct
-{
-	WSAOVERLAPPED fakeOvr;
-	Client *client;
-};
 
 // Initialise the server and prepare to serve the client
 BOOL ServerInitExtendedFuncs();

@@ -37,4 +37,11 @@ private:
 	bool          transferCancelled_;
 };
 
+struct ClientStruct
+{
+	WSAOVERLAPPED fakeOvr;
+	Client *client;
+};
+
+
 #endif

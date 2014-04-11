@@ -18,7 +18,8 @@ typedef struct _TransferProps
 {
 	WSAOVERLAPPED	wsaOverlapped;		 /**< An overlapped structure for use with completion routines. */
 	LPSOCKADDR_IN	paddr_in;			 /**< Pointer to a sockaddr_in struct which holds server/client address details. */
-	SOCKET			socket;				 /**< A socket on which to send and/or receive. */
+	SOCKET			listenSocket;        /**< A socket on which to listen for TCP connections. */
+	SOCKET			udpListenSock;		 /**< A socket on which to listen for UDP data. */
 	DWORD			nSockType;			 /**< The type of socket (SOCK_STREAM or SOCK_DGRAM) */
 	WSABUF			dataBuffer;			 /**< Holds data received from or to send to another host. */
 	HANDLE			audioFile;			 /**< Name of a (user-specified) file to send or to receive into. */

@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	ServerInitExtendedFuncs();
-	ServerInitSocket(props);
+	//ServerInitSocket(props);
 	Serve(props);
 
 	WSACleanup();

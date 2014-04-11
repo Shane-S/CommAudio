@@ -8,6 +8,7 @@
  */
 
 #include "Unicast.h"
+
 extern std::unique_ptr<AudioLibrary> lib;
 extern HSTREAM streamBuffer;
 

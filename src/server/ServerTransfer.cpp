@@ -1,4 +1,6 @@
 #include "ServerTransfer.h"
+#include "Client.h"
+#include "ServerInfo.h"
 
 using std::vector;
 using std::string;
@@ -79,7 +81,7 @@ BOOL ServerInitExtendedFuncs()
  */
 BOOL ServerInitSocket(LPTransferProps props)
 {
-	SOCKET s = WSASocket(AF_INET, props->nSockType, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
+	SOCKET s = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	BOOL set = TRUE;
 
 	props->paddr_in->sin_addr.s_addr = htonl(INADDR_ANY);
@@ -96,7 +98,12 @@ BOOL ServerInitSocket(LPTransferProps props)
 		MessageBoxPrintf(MB_ICONERROR, TEXT("bind Failed"), TEXT("Could not bind socket, error %d"), WSAGetLastError());
 		return FALSE;
 	}
-	props->socket = s;
+	props->listenSocket  = s;
+
+	props->paddr_in->sin_port = htons(7001);
+	s = WSASocket(AF_INET, SOCK_DGRAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
+
+	props->udpListenSock = s;
 	return TRUE;
 }
 
@@ -114,8 +121,9 @@ DWORD WINAPI Serve(VOID *pProps)
 	LPTransferProps props = (LPTransferProps)pProps;
 	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
 	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
-	WSAEVENT        hEvents[] = { CreateEvent(NULL, FALSE, FALSE, TEXT("AcceptExEvt")) };
-	SOCKET			listenSock	= props->socket;
+	ServerInfo      serve(7000, 7001);
+	WSAEVENT        hEvents[] = { serve.getEvent() };
+	//SOCKET			listenSock	= props->listenSocket;
 	SOCKET			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	DWORD			flagsAreSeriouslyStupid = 0;
 
@@ -128,12 +136,12 @@ DWORD WINAPI Serve(VOID *pProps)
 	memset(ovr, 0, sizeof(WSAOVERLAPPED));
 	ovr->hEvent = hEvents[0];
 
-	listen(listenSock, 5);
+	listen(serve.getTCPListen(), 5);
 
 	streamBuffer = BASS_StreamCreateFile(FALSE, lib->songList[0].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
 	int err = BASS_ErrorGetCode();
 
-	OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
+	OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, &serve.acceptOvr);
 	while (1)
 	{
 		int evt = WSAWaitForMultipleEvents(1, hEvents, FALSE, WSA_INFINITE, TRUE);
@@ -164,7 +172,7 @@ DWORD WINAPI Serve(VOID *pProps)
 
 			int err = GetLastError();
 			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, 0);
-			OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
+			OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
 		}
 	}
 

@@ -20,6 +20,7 @@ public:
 	std::string fileType;
 	std::string artDirectory;
 
+	SongData() {}
 	SongData(std::string directory, std::string artDirectory, std::string fileType);
 	SongData(const char * metadata, const uint32_t strLens[NUM_METASTRS]);
 	template<typename T>

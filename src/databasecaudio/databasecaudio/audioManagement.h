@@ -22,7 +22,7 @@
 #define sRate 44100
 #define SERVER_TCP_PORT 7000
 #define BUFSIZE         4096
-#define TIMECAST_ADDR   "234.5.6.8"
+#define TIMECAST_ADDR   "234.5.6.7"
 #define TIMECAST_PORT   7001
 #define MAXADDRSTR		16
 #define RECBUF			2048

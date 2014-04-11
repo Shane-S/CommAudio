@@ -28,7 +28,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v100</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -152,7 +152,10 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="audioLibrary.cpp" />
+    <ClCompile Include="multicast.cpp" />
     <ClCompile Include="SongData.cpp" />
+    <ClCompile Include="tcp.cpp" />
+    <ClCompile Include="udp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ahm.h" />

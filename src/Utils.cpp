@@ -78,14 +78,14 @@ int CDECL MessageBoxPrintf(DWORD dwType, TCHAR * szCaption, TCHAR * szFormat, ..
 -- Logs information about the transfer: start timestamp, end timestamp, transfer time, number of packets
 -- sent/received/expected, packet size, and protocol used.
 ---------------------------------------------------------------------------------------------------------------------------*/
-VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, HWND hwnd)
+/*VOID LogTransferInfo(const char *filename, LPTransferProps props, DWORD dwSentOrRecvd, HWND hwnd)
 {
 	//DWORD			dwHostMode = (DWORD)GetWindowLongPtr(hwnd, GWLP_HOSTMODE);
 	FILE			*file;
 	CHAR			log[512] = { 0 };
 	INT				written = 0;
 	TCHAR			logw[512];
-}
+}*/
 
 /*-------------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: CreateTimestamp

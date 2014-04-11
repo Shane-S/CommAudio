@@ -32,6 +32,7 @@ WSABUF                    nameWsaBuf;				// Holds a newly connected client's nam
 vector<ClientStruct>      clientList;				// 
 int                       lastClient;
 HSTREAM                   streamBuffer;
+HSTREAM				      streamBuffer2;
 
 /**
  * Gets function pointers to the extended windows sockets functions allowing overlapped accept calls.
@@ -73,74 +74,51 @@ BOOL ServerInitExtendedFuncs()
 }
 
 /**
- * Initialises a TCP or UDP socket for use by the server.
- *
- * @author Shane Spoor
- * @param[in] props Pointer to the TransferProps struct containing socket info.
- * @return True if the socket was successfully initiliased, false otherwise.
- */
-BOOL ServerInitSocket(LPTransferProps props)
-{
-	SOCKET s = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
-	BOOL set = TRUE;
-
-	props->paddr_in->sin_addr.s_addr = htonl(INADDR_ANY);
-	props->paddr_in->sin_port = htons(7000);
-
-	if (s == INVALID_SOCKET)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("WSASocket Failed"), TEXT("Could not create socket, error %d"), WSAGetLastError());
-		return FALSE;
-	}
-
-	if (bind(s, (sockaddr *)props->paddr_in, sizeof(sockaddr)) == SOCKET_ERROR)
-	{
-		MessageBoxPrintf(MB_ICONERROR, TEXT("bind Failed"), TEXT("Could not bind socket, error %d"), WSAGetLastError());
-		return FALSE;
-	}
-	props->listenSocket  = s;
-
-	props->paddr_in->sin_port = htons(7001);
-	s = WSASocket(AF_INET, SOCK_DGRAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
-
-	props->udpListenSock = s;
-	return TRUE;
-}
-
-/**
  * Listens for data/connection attempts, then receives the client's data.
  *
  * @author Shane Spoor
  * @designer Shane Spoor
- * @param[in] hwnd Handle to the window (cast as a VOID * for the thread prototype).
- * @return The thread's status on exit.
  */
-DWORD WINAPI Serve(VOID *pProps)
+DWORD WINAPI Serve()
 {
 	DWORD           bytesRecvd;
-	LPTransferProps props = (LPTransferProps)pProps;
 	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
 	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
 	ServerInfo      serve(7000, 7001);
 	WSAEVENT        hEvents[] = { serve.getEvent() };
-	//SOCKET			listenSock	= props->listenSocket;
 	SOCKET			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	DWORD			flagsAreSeriouslyStupid = 0;
 
-	char streamDataBuffer[BUFSIZE];
+	char streamDataBuffer[2048];
 	DWORD readLength = 0;
 	DWORD SendBytes = 0;
 	DWORD BytesTransferred = 0;
 	WSABUF buffer;
 
+	SOCKADDR_IN multicastAddr;
+
+	memset(&multicastAddr, 0, sizeof(SOCKADDR_IN));
+	multicastAddr.sin_addr.s_addr = inet_addr(MULTICAST_ADDR);
+	multicastAddr.sin_port = htons(MULTICAST_PORT);
+	multicastAddr.sin_family = AF_INET;
+
+	memset(&buffer, 0, sizeof(WSABUF));
 	memset(ovr, 0, sizeof(WSAOVERLAPPED));
 	ovr->hEvent = hEvents[0];
 
 	listen(serve.getTCPListen(), 5);
 
 	streamBuffer = BASS_StreamCreateFile(FALSE, lib->songList[0].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
+	streamBuffer2 = BASS_StreamCreateFile(FALSE, lib->songList[112].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
+
+	readLength = BASS_ChannelGetData(streamBuffer2, streamDataBuffer, 2048);
+	buffer.len = readLength;
+	buffer.buf = streamDataBuffer;
+
 	int err = BASS_ErrorGetCode();
 
+	WSASendTo(serve.getUDPMulticast(), &buffer, 1, NULL, 0, (const sockaddr *)&multicastAddr, sizeof(multicastAddr), (LPWSAOVERLAPPED)&serve, MulticastSendComplete);
+	int error = WSAGetLastError();
 	OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, &serve.acceptOvr);
 	while (1)
 	{
@@ -175,8 +153,6 @@ DWORD WINAPI Serve(VOID *pProps)
 			OverlappedAccept(serve.getTCPListen(), acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
 		}
 	}
-
-	ServerCleanup(props);
 	return 0;
 }
 
@@ -211,34 +187,19 @@ VOID CALLBACK RecvNameCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfe
 }
 
 /**
- * Resets server properties in preparation for the next transfer.
- *
- * @param props Pointer to a TransferProps structure to free.
- */
-VOID ServerCleanup(LPTransferProps props)
-{
-	//recvd = 0;
-	//if (destFile)
-	//	CloseHandle(destFile);
-	//destFile = 0;
-}
-
-/**
  * Increments the number of packets received when a WSARecvFrom completes on a UDP socket.
  *
  * @param props Pointer to the TransferProps structure containing details about this transfer.
  * @return True if the WSARecvFrom succeeded, or false if something went wrong.
  */
-BOOL ListenUDP(LPTransferProps props)
+BOOL ListenUDP(/*LPTransferProps props*/)
 {
 	DWORD flags = 0, error = 0;
-	props->dwTimeout = INFINITE;
 
 	error = WSAGetLastError();
 	if (error && error != WSA_IO_PENDING)
 	{
 		MessageBoxPrintf(MB_ICONERROR, TEXT("WSARecvFrom Error"), TEXT("WSARecvFrom encountered error %d"), error);
-		props->dwTimeout = 0;
 		return FALSE;
 	}
 	return TRUE;

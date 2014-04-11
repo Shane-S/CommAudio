@@ -28,6 +28,12 @@ SOCKADDR_IN Client::getAddr() const
 	return addr_;
 }
 
+
+SOCKET Client::getSock() const
+{
+	return tcpSock_;
+}
+
 /**
  * Sets the client's name and returns a reference to the client object.
  *

@@ -22,11 +22,14 @@ using std::string;
  * @file ServerTransfer.cpp
  */
 
+extern std::unique_ptr<AudioLibrary> lib;
+
 LPFN_ACCEPTEX             AcceptPtr;                // Pointer to the AcceptEx function
 LPFN_GETACCEPTEXSOCKADDRS GetAcceptExSockaddrsPtr;  // Pointer to the GetAcceptExSockaddrs function
 WSABUF                    nameWsaBuf;				// Holds a newly connected client's name
 vector<ClientStruct>      clientList;				// 
 int                       lastClient;
+HSTREAM                   streamBuffer;
 
 /**
  * Gets function pointers to the extended windows sockets functions allowing overlapped accept calls.
@@ -111,17 +114,24 @@ DWORD WINAPI Serve(VOID *pProps)
 	LPTransferProps props = (LPTransferProps)pProps;
 	CHAR            out_buf[sizeof(DWORD)+((sizeof(sockaddr_in) + 16)* 2)] = { 0 };
 	WSAOVERLAPPED   *ovr        = new WSAOVERLAPPED;
-	WSAOVERLAPPED   fakeOvr;
 	WSAEVENT        hEvents[] = { CreateEvent(NULL, FALSE, FALSE, TEXT("AcceptExEvt")) };
 	SOCKET			listenSock	= props->socket;
 	SOCKET			acceptSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	DWORD			flagsAreSeriouslyStupid = 0;
 
+	char streamDataBuffer[BUFSIZE];
+	DWORD readLength = 0;
+	DWORD SendBytes = 0;
+	DWORD BytesTransferred = 0;
+	WSABUF buffer;
+
 	memset(ovr, 0, sizeof(WSAOVERLAPPED));
-	memset(&fakeOvr, 0, sizeof(WSAOVERLAPPED));
 	ovr->hEvent = hEvents[0];
 
 	listen(listenSock, 5);
+
+	streamBuffer = BASS_StreamCreateFile(FALSE, lib->songList[0].directory.c_str(), 0, 0, BASS_STREAM_DECODE);
+	int err = BASS_ErrorGetCode();
 
 	OverlappedAccept(listenSock, acceptSock, out_buf, sizeof(uint32_t), &bytesRecvd, ovr);
 	while (1)
@@ -169,13 +179,27 @@ DWORD WINAPI Serve(VOID *pProps)
 VOID CALLBACK RecvNameCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped,
 	DWORD dwFlags)
 {
+	char streamDataBuffer[BUFSIZE];
+	DWORD readLength = 0;
+	DWORD SendBytes = 0;
+
 	ClientStruct *clnt = (ClientStruct *)lpOverlapped;
 	Client *clientPtr = clnt->client;
 	string newName(nameWsaBuf.buf, nameWsaBuf.len);
+
+	WSABUF *buffer = new WSABUF;
 	
 	clientPtr->setName(newName);
 	fprintf(stderr, "Accepted client with address %s and name %s\n", inet_ntoa(clientPtr->getAddr().sin_addr), 
 		clientPtr->getName().c_str());
+
+	readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, BUFSIZE);
+	if (!readLength)
+		return;
+	buffer->len = BUFSIZE;
+	buffer->buf = streamDataBuffer;
+
+	WSASend(clientPtr->getSock(), buffer, 1, NULL, 0, &clnt->fakeOvr, UnicastFileSend);
 }
 
 /**

@@ -15,6 +15,7 @@ public:
 	// Getter functions
 	std::string getName() const;
 	SOCKADDR_IN getAddr() const;
+	SOCKET      getSock() const;
 	
 	// Setter functions; uses the builder pattern, so can be called in succession
 	Client& setName(const std::string &newName);

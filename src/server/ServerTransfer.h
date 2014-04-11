@@ -12,6 +12,8 @@
 #include <mswsock.h>
 #include <conio.h>
 #include <cstdint>
+#include "ahm.h"
+#include "audioManagement.h"
 #include "../TransferProps.h"
 #include "../Utils.h"
 #include "Client.h"

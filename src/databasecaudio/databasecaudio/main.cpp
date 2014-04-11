@@ -39,3 +39,28 @@ int main(void)
 
 	return 0;
 }
+
+void saveFile(const char * buffer)
+{
+	FILE * fp;
+	BASS_CHANNELINFO info;
+	WAVEFORMATEX wf;
+
+	if (!(fp = fopen("BASS.WAV", "wb"))){
+		cout << "Failed to send to file." << endl;
+	}
+	printf("writing to BASS.WAV file... press a key to stop\n");
+	BASS_ChannelGetInfo(2, &info);
+	wf.wFormatTag = 1;
+	wf.nChannels = info.chans;
+	wf.wBitsPerSample = (info.flags&BASS_SAMPLE_8BITS ? 8 : 16);
+	wf.nBlockAlign = wf.nChannels*wf.wBitsPerSample / 8;
+	wf.nSamplesPerSec = info.freq;
+	wf.nAvgBytesPerSec = wf.nSamplesPerSec*wf.nBlockAlign;
+
+	fwrite("RIFF\0\0\0\0WAVEfmt \20\0\0\0", 20, 1, fp);
+	fwrite(&wf, 16, 1, fp);
+	fwrite("data\0\0\0\0", 8, 1, fp);
+
+	fwrite(buffer, sizeof(buffer), 1, fp);
+}

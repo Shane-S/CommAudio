@@ -7,6 +7,11 @@
 class AudioLibrary
 {
 public:
+	/**
+	 * The maximum number of songs held in the library at a time.
+	 */
+	const static int MAX_SONGS = 10000;
+
 	std::vector<SongData>		songList;
 	std::vector<std::string>	supportedTypes;
 	int							numsongs;

@@ -15,7 +15,7 @@ using std::string;
 ServerInfo::ServerInfo(const short tcpPort, const short udpPort)
 : fakeOvr(), acceptOvr(), listenSocket(0), udpListenSock(0), udpMulticast(0), dataBuffer(), clientList()
 {
-	WSAEVENT    hEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("AcceptEx"));;
+	WSAEVENT    hEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("AcceptEx"));
 	SOCKADDR_IN paddr_in;
 	struct ip_mreq stMreq;
 
@@ -23,7 +23,7 @@ ServerInfo::ServerInfo(const short tcpPort, const short udpPort)
 
 	int yes = 1;
 	if (hEvent == (HANDLE)-1)
-		throw "Couldn't create event for accepting.";
+		throw "ServerInfo::ServerInfo: Couldn't create event for accepting.";
 
 	acceptOvr.hEvent = hEvent;
 
@@ -46,6 +46,9 @@ ServerInfo::ServerInfo(const short tcpPort, const short udpPort)
 	if (bind(listenSocket, (const sockaddr *)&paddr_in, sizeof(SOCKADDR_IN)) == -1)
 		throw "ServerInfo::ServerInfo: Couldn't bind listenSocket.";
 
+	if (listen(listenSocket, 5) == SOCKET_ERROR)
+		throw "ServerInfo::ServerInfo: Couldn't start listening on listenSocket.";
+
 	paddr_in.sin_port = htons(udpPort);
 	udpListenSock = WSASocket(AF_INET, SOCK_DGRAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	if (udpListenSock == INVALID_SOCKET)
@@ -58,7 +61,7 @@ ServerInfo::ServerInfo(const short tcpPort, const short udpPort)
 
 	udpMulticast = WSASocket(AF_INET, SOCK_DGRAM, 0, NULL, NULL, WSA_FLAG_OVERLAPPED);
 	if (udpMulticast == INVALID_SOCKET)
-		throw "ServerInfo::ServerInfo: Couldn't make udpMulticast";
+		throw "ServerInfo::ServerInfo: Couldn't make udpMulticast.";
 
 	paddr_in.sin_port        = 0;
 	if (bind(udpMulticast, (struct sockaddr*) &paddr_in, sizeof(SOCKADDR_IN)) == SOCKET_ERROR)

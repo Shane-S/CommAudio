@@ -12,16 +12,19 @@
 #include <mswsock.h>
 #include <conio.h>
 #include <cstdint>
-#include "ahm.h"
+#include "AudioLibrary.h"
 #include "audioManagement.h"
 #include "../Utils.h"
 
 #define UDP_MAXPACKET	65000	/**< The maximum UDP datagram size */
-#define BUFSIZE 2048
+#define BUFSIZE			2048
+
+class ServerInfo;
 
 // Initialise the server and prepare to serve the client
 BOOL ServerInitExtendedFuncs();
 DWORD WINAPI Serve();
+int AddClient(char *outBuf, SOCKET acceptSock, ServerInfo *serve, DWORD *flags, DWORD *bytes, INT *len);
 
 VOID CALLBACK ServerUniSendCompletion(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
 	LPOVERLAPPED lpOverlapped, DWORD dwFlags);

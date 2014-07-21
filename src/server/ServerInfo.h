@@ -16,7 +16,7 @@ class ServerInfo
 {
 	
 public:
-	WSAOVERLAPPED	fakeOvr;		     /**< An overlapped structure to make completion routines happy. */
+	WSAOVERLAPPED	fakeOvr;       /**< An overlapped structure to make completion routines happy. */
 	WSAOVERLAPPED   acceptOvr;     /**< An overlapped structure for accepting connections. */
 
 	ServerInfo(const short tcpPort, const short udpPort);

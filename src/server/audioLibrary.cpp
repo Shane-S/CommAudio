@@ -1,18 +1,15 @@
-#include "ahm.h"
+#include "AudioLibrary.h"
 using std::string;
 using std::list;
 using std::shared_ptr;
 
 AudioLibrary::AudioLibrary(string directory, string supportedTypes, int numTypes)
+: numsongs(0), playingSong(0)
 {
 	if (numTypes == 0)
 	{
 		std::cerr << "At least one type must be provided in the format \"wav, mp3, ...\"" << std::endl;
 	}
-
-	this->numsongs = 0;
-	this->maxSongs = 10000;
-	this->playingSong = 0;
 
 	for (int i = 0; i < numTypes; i++)
 	{
@@ -27,22 +24,22 @@ AudioLibrary::AudioLibrary(string directory, string supportedTypes, int numTypes
 }
 
 /**
-* Constructor for the audio library. Sets the supported types
-* and the song library from the passed in directory.
-*
-* Depending on the size of the audio library, this object could be quite large. Ensure that this object is safe
-* in memory with unique_ptr or new.
-*
-* @param[in]	directory		the directory to be turned into an audio library.
-* @param[in]	supportedTypes	the audio types supported by this library.
-*								Must be in the form ",wav,mp3,ogg,...". Must contain at least one format.
-* @param[in]	numTypes		the number of types supported.
-*
-* @designer Ramzi Chennafi
-* @author   Ramzi Chennafi
-* @date     April 3rd, 2014
-*/
-AudioLibrary::AudioLibrary(string directory, string supportedTypes, int numTypes, int maxSongs)
+ * Constructor for the audio library. Sets the supported types
+ * and the song library from the passed in directory.
+ *
+ * Depending on the size of the audio library, this object could be quite large. Ensure that this object is safe
+ * in memory with unique_ptr or new.
+ *
+ * @param[in]	directory		the directory to be turned into an audio library.
+ * @param[in]	supportedTypes	the audio types supported by this library.
+ *								Must be in the form ",wav,mp3,ogg,...". Must contain at least one format.
+ * @param[in]	numTypes		the number of types supported.
+ *
+ * @designer Ramzi Chennafi
+ * @author   Ramzi Chennafi
+ * @date     April 3rd, 2014
+ */
+AudioLibrary::AudioLibrary(string directory, string supportedTypes, int numTypes)
 {
 	if (numTypes == 0)
 	{
@@ -50,7 +47,6 @@ AudioLibrary::AudioLibrary(string directory, string supportedTypes, int numTypes
 	}
 
 	this->numsongs = 0;
-	this->maxSongs = maxSongs;
 
 	this->directory = directory;
 	for (int i = 0; i < numTypes; i++)

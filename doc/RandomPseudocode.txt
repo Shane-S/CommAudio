@@ -1,0 +1,20 @@
+Main Flow
+---------
+Perform Server Initialisation
+Wait on AcceptEx
+
+Server Initialisation
+---------------------
+Load the database
+
+
+Acceptex Completion
+-------------------
+Check for errors
+If errors
+    Log errors
+    Return
+
+Create new client object with socket
+Wait on client socket for next packet
+Return

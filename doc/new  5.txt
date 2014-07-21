@@ -1,0 +1,69 @@
+Client Accept Pseudocode
+
+If the event was Accept
+    Do a WSARecv on the socket for the client's name
+
+In WSARecv
+If we got a file request
+    Search for the file name in the library
+    If it's not found, send an error back
+    If it is found
+        Get a file handle for it
+        Send the metadata
+
+Server stuff
+Accept (gets the name length, then gets the name)
+File request (gets the packet type, gets the size packet, gets the actual packet content)
+Chat data (gets the packet type, gets the size packet, gets the actual packet content)
+Voice chat data (gets the packet type, gets the size packet, gets the actual packet content)
+
+
+class Packet
+{
+    explicit
+    
+}
+
+
+Client info has
+*   Client name
+*   Client socket descriptor
+*   Handle to the stream
+*   Linked list of WSABUFs for sending
+*   Addr_in struct (maybe)
+*   Flag for transfer cancellation
+
+#define SONG_SEND_SIZE 2048
+
+void sendAudioData()
+{
+    std::unique_ptr<WSABUF> bufPtr(new WSABUF);
+    std::unique_ptr<WSABUF> oldBuf;
+    char streamDataBuffer;
+    char *sendData;
+	DWORD readLength = 0;
+    ClientInfo *client = (ClientInfo *)lpOverlapped;
+
+    // Free the old buffer
+    oldBuf = client->list.front();
+    free(oldBuf->buf);
+    cient->list.pop_front();
+    
+    readLength = BASS_ChannelGetData(streamBuffer, streamDataBuffer, SONG_SEND_SIZE);
+    if(readLength == -1)
+    {
+        //do some sort of error handling
+        client->transferCancelled = TRUE;
+        return;
+    }
+    else if(readLength < SONG_SEND_SIZE) // We've read to the end of the file
+        client->transferCancelled = TRUE;
+   
+    streamDataBuffer = (char *)malloc(SONG_SEND_SIZE);
+    client->sendList.push_back(bufPtr);
+    
+    buffer.len = SONG_SEND_SIZE;
+    buffer.buf = streamDataBuffer;
+
+    err = WSASend(socket, &buffer, 1, NULL, 0, 0, NULL);
+}

@@ -1,0 +1,11 @@
+Make the wsaBuf a vector of wsaBufs
+On the server side
+    Receive request
+    Route to appropriate function
+    Create a list of wsaBufs
+    Send one
+    In the completion routine
+        If list size == 0
+            Return
+        pop_front on the wsaBuf list
+        Send the next one

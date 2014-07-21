@@ -1,0 +1,29 @@
+Notes on Current Code State and Future Changes
+----------------------------------------------
+We shouldn't require that clients have a username. If they choose not to have one, they will simply be "user[user number]" in the chat, and they'll
+have no settings persisted between uses.
+
+If they do choose to sign up, they'll have a username/password combination. The user will be allowed to login if they want
+to view their own personal settings, or they can use the program anonymously and not have anything stored. There should be some encryption to
+secure the login (possibly public/private key encryption as in PGP or other schemes).
+
+Clients choosing to use a username and password should have their information stored in the database. We will persist some objects (playlists,
+UI themes [if we even go that far], other client-side settings) on the client side in a file, since that information really doesn't need to be on the
+server. The server can store an image/avatar associated with the account, the user's actual name (if they choose to include it), their interests, etc.
+
+Unrelated to username/password authentication, the project should switch to PortAudio. It could take some reworking, but the server doesn't actually have
+that much functionality right now anyway.
+
+The database calls need to happen asynchronously somehow. Making one (or several) worker threads could facilitate this. We'll have to use transactions
+to ensure that the threads don't leave the database in an inconsistent state. Several worker threads waiting for database requests sound like good candidates
+for completion ports, so it's a good idea to research that.
+
+When a database operation completes, it needs a way to notify the server. This will necessarily happen in a callback function. It is then the server's job to
+react to the success or failure of the operation and communicate this to the client accordingly. If the operation fails because the name is already in use, then
+the server could try to find several other similar names that aren't in use and suggest these to the client. If the operation succeeds, then the server should
+just send some kind of notification telling the client that everything worked out.
+
+Rearrange the absolute shit out of the ServerInfo class. It should probably be renamed to something like Server or ClientControl or whatever the fuck. At any rate,
+shuffle all of the current code into there and simply call methods from the Server or ClientControl or SomeRandomClass object to make the program logic more clear
+and reasonable. These calls will be in main, and you don't even have to know about all of the other threads that will be spawned off from the Server object and its DAO
+that we'll be making. This will make the program (finally) properly object-oriented, and the final code will probably be a lot more palatable.

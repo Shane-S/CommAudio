@@ -1,0 +1,14 @@
+Stream Object
+---------------------
+Data members:
+    *   BASS stream object
+    *   List of last PING_LIST ping times (PING_LIST being some defined size determined through trial and error)
+    *   Critical section for accessing the ping list
+    *   Last send time (milliseconds) for ping
+    *   Last receive time for ping
+    *   Timer
+    *   WSABuf for holding data
+    *   Socket for sending and receiving pings
+
+The Stream object is responsible for critical sections, etc; its setters and getters will have the critical section
+so that no other code must be aware of them

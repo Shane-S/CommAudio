@@ -1,0 +1,30 @@
+Timer thread
+------------
+While server is running
+    Go through list of clients
+        Get client's Stream's socket
+        Send ping on ping socket
+    Sleep
+
+Ping Send Completion Routine
+----------------------------
+Check for errors // Maybe the client has disconnected during this time?
+If errors
+    Remove client from list
+        
+Ping Receive Completion Routine
+-------------------------------
+Get timer time
+Set latest receive time
+
+Unicast Send Completion
+-----------------------
+Calculate Time
+In completion routine, check appropriate amount of time has passed
+If no
+
+Calculate Time
+--------------
+Get client's five-ping average to determine approximate round-trip time
+
+    
